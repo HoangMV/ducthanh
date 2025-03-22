@@ -1,0 +1,63 @@
+# Template mẫu cho file Word xuất đơn hàng
+# Hướng dẫn: Sao chép nội dung này và tạo file order_template.docx với định dạng tương tự
+
+CÔNG TY TNHH SẢN XUẤT VÀ DỊCH VỤ ĐỨC THÀNH
+
+XÁC NHẬN ĐẶT HÀNG
+
+Số đơn hàng: {order_number}
+Ngày đặt hàng: {order_date}
+
+THÔNG TIN KHÁCH HÀNG:
+Khách hàng: {customer_name}
+Mã số thuế: {tax_code}
+Địa chỉ: {invoice_address}
+
+THÔNG TIN GIAO HÀNG:
+Người nhận: {recipient_name}
+Điện thoại: {recipient_phone}
+Địa chỉ giao hàng: {delivery_address}
+
+DANH SÁCH SẢN PHẨM:
+{#products}
+STT: {stt}
+Tên hàng hoá: {ten_hang_hoa}
+Mô tả: {mo_ta}
+Đơn vị tính: {dvt}
+Số lượng: {so_luong}
+Đơn giá: {don_gia}
+Thành tiền: {thanh_tien}
+----------------------------------------
+{/products}
+
+Cộng tiền hàng: {subtotal}
+Thuế GTGT (8%): {tax_amount}
+Tổng cộng: {grand_total}
+
+{total_in_words}
+
+          BÊN MUA                                    BÊN BÁN
+        (Ký, họ tên)                              (Ký, họ tên)
+
+# Chú thích các placeholder:
+# {order_number} - Số đơn hàng
+# {order_date} - Ngày đặt hàng
+# {customer_name} - Tên khách hàng
+# {tax_code} - Mã số thuế
+# {invoice_address} - Địa chỉ xuất hóa đơn
+# {recipient_name} - Tên người nhận
+# {recipient_phone} - Số điện thoại người nhận
+# {delivery_address} - Địa chỉ giao hàng
+# {#products} - Bắt đầu vòng lặp sản phẩm
+# {/products} - Kết thúc vòng lặp sản phẩm
+# {stt} - Số thứ tự
+# {ten_hang_hoa} - Tên hàng hóa
+# {mo_ta} - Mô tả sản phẩm
+# {dvt} - Đơn vị tính
+# {so_luong} - Số lượng
+# {don_gia} - Đơn giá
+# {thanh_tien} - Thành tiền
+# {subtotal} - Tổng tiền hàng
+# {tax_amount} - Tiền thuế GTGT
+# {grand_total} - Tổng cộng
+# {total_in_words} - Số tiền bằng chữ
