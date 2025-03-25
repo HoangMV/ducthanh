@@ -184,7 +184,7 @@
     <div id="printContent" class="print-content ml-80">
         <!-- Nội dung xác nhận đặt hàng sẽ được thêm vào đây -->
     </div>
-
+    <script src="key.js"></script>
     <script>
         let appData = {
             orders: [],
@@ -193,10 +193,7 @@
             selectedOrders: new Set()
         };
         // Constants for AppSheet connection
-        const appId = 'd4e7fd95-42b6-4a41-ab3e-eac72731fe07';
-        const accessKey = 'V2-3dYqz-xwhyz-B41Kw-E9nvf-hATE7-YNdCe-9JYUY-6A7q3';
-        const region = 'www';
-
+       
         let allOrders = [];
         let allCustomers = [];
         let selectedOrders = new Set();
@@ -624,8 +621,8 @@
 
                     return `
                 <tr>
-                    <td>${index + 1}</td>
-                    <td class="product-name">
+                    <td  style="border: 1px solid #000; text-align: center;">${index + 1}</td>
+                    <td class="product-name" style="border: 1px solid #000; text-align: center;">
                         <div class="product-info" style="text-align: left; padding-left: 10px;">
                             <strong>${product['Tên hàng hoá'] || ''}</strong>
                             <span class="product-description" style="display: block; margin-top: 5px; color: #666;">
@@ -633,10 +630,10 @@
                             </span>
                         </div>
                     </td>
-                    <td>${product['Đơn vị tính'] || 'Cái'}</td>
-                    <td>${quantity}</td>
-                    <td>${formatCurrency(unitPrice)}</td>
-                    <td>${formatCurrency(total)}</td>
+                    <td style="border: 1px solid #000; text-align: center; ">${product['Đơn vị tính'] || 'Cái'}</td>
+                    <td style="border: 1px solid #000; text-align: center;">${quantity}</td>
+                    <td style="border: 1px solid #000; text-align: center;">${formatCurrency(unitPrice)}</td>
+                    <td style="border: 1px solid #000; text-align: center;">${formatCurrency(total)}</td>
                 </tr>
             `;
                 }).join('');
@@ -903,13 +900,155 @@
             }
         }
         // Export all selected orders to Word
+        // Export all selected orders to Word
         async function exportSelectedToWord() {
-            if (selectedOrders.size === 0) {
+            if (appData.selectedOrders.size === 0) {
                 alert('Vui lòng chọn ít nhất một đơn hàng để xuất Word');
                 return;
             }
 
-            alert('Chức năng xuất Word đang được phát triển. Vui lòng sử dụng chức năng in để xuất PDF thay thế.');
+            showLoading();
+
+            try {
+                // Tải các thư viện cần thiết nếu chưa có
+                if (typeof PizZip === 'undefined' || typeof docxtemplater === 'undefined' || typeof saveAs === 'undefined') {
+                    await Promise.all([
+                        loadScript('https://unpkg.com/pizzip@3.1.4/dist/pizzip.js'),
+                        loadScript('https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.37.11/docxtemplater.js'),
+                        loadScript('https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js')
+                    ]);
+                }
+
+                // Lọc ra các đơn hàng đã chọn
+                const selectedOrdersList = appData.orders.filter(order =>
+                    appData.selectedOrders.has(order['ID đơn hàng'])
+                );
+
+                // Tải template từ server
+                const response = await fetch('https://hoangmv.github.io/templates/order_template.docx');
+                if (!response.ok) {
+                    throw new Error('Không thể tải template Word');
+                }
+                const templateContent = await response.arrayBuffer();
+
+                // Tạo một file ZIP chứa tất cả các đơn hàng đã được xuất
+                const zipFiles = [];
+
+                // Xử lý từng đơn hàng
+                for (const order of selectedOrdersList) {
+                    try {
+                        const orderId = order['ID đơn hàng'];
+                        const customerId = order['ID khách hàng'];
+
+                        // Lấy thông tin khách hàng
+                        const customer = appData.customers[customerId] || {
+                            'Tên khách hàng đầy đủ': 'Không xác định',
+                            'MST': '',
+                            'Địa chỉ Hoá đơn': '',
+                            'SĐT': '',
+                            'Địa chỉ trả hàng': ''
+                        };
+
+                        // Lấy danh sách sản phẩm
+                        const products = appData.products[orderId] || [];
+
+                        // Tính toán tổng tiền
+                        let subtotal = 0;
+                        const formattedProducts = products.map((product, index) => {
+                            const quantity = parseFloat(product['Số lượng']) || 0;
+                            const unitPrice = parseFloat(product['Đơn giá']) || 0;
+                            const total = parseFloat(product['Thành tiền hàng']) || (quantity * unitPrice);
+                            subtotal += total;
+
+                            return {
+                                stt: (index + 1).toString(),
+                                ten_hang_hoa: product['Tên hàng hoá'] || '',
+                                mo_ta: product['Mô tả'] || '',
+                                dvt: product['Đơn vị tính'] || 'Cái',
+                                so_luong: formatCurrency(quantity),
+                                don_gia: formatCurrency(unitPrice),
+                                thanh_tien: formatCurrency(total)
+                            };
+                        });
+
+                        // Tính thuế và tổng tiền
+                        const tax = subtotal * 0.08;
+                        const grandTotal = subtotal + tax;
+
+                        // Tạo instance mới của PizZip và docxtemplater
+                        const zip = new PizZip(templateContent);
+                        const doc = new docxtemplater(zip, {
+                            paragraphLoop: true,
+                            linebreaks: true
+                        });
+
+                        // Đặt dữ liệu vào template
+                        const data = {
+                            order_number: order['Mã đơn hàng'] || '',
+                            order_date: formatDate(order['Ngày đặt hàng'] || new Date()),
+                            customer_name: customer['Tên khách hàng đầy đủ'] || '',
+                            tax_code: customer['MST'] || '',
+                            invoice_address: customer['Địa chỉ Hoá đơn'] || '',
+                            recipient_name: customer['Tên khách hàng đầy đủ'] || '',
+                            recipient_phone: customer['SĐT'] || '',
+                            delivery_address: customer['Địa chỉ trả hàng'] || '',
+                            products: formattedProducts,
+                            subtotal: formatCurrency(subtotal),
+                            tax_amount: formatCurrency(tax),
+                            grand_total: formatCurrency(grandTotal),
+                            total_in_words: `Số tiền viết bằng chữ: ${numberToWords(Math.round(grandTotal))}.`
+                        };
+
+                        // Render template với dữ liệu
+                        doc.setData(data);
+                        doc.render();
+
+                        // Tạo và thêm file vào danh sách
+                        const blob = doc.getZip().generate({
+                            type: "blob",
+                            mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        });
+
+                        const fileName = `Xac_nhan_dat_hang_${order['Mã đơn hàng']}.docx`;
+                        zipFiles.push({ blob, fileName });
+
+                    } catch (error) {
+                        console.error(`Error processing order ${order['ID đơn hàng']}:`, error);
+                        if (error.properties && error.properties.errors) {
+                            console.log('Template Error details:', error.properties.errors);
+                        }
+                    }
+                }
+
+                // Nếu chỉ có 1 đơn hàng được chọn, tải xuống trực tiếp
+                if (zipFiles.length === 1) {
+                    saveAs(zipFiles[0].blob, zipFiles[0].fileName);
+                }
+                // Nếu có nhiều đơn hàng, tải xuống file zip
+                else if (zipFiles.length > 1) {
+                    // Tải JSZip nếu cần
+                    if (typeof JSZip === 'undefined') {
+                        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+                    }
+
+                    const zip = new JSZip();
+
+                    // Thêm từng file vào zip
+                    for (const file of zipFiles) {
+                        zip.file(file.fileName, file.blob);
+                    }
+
+                    // Tạo và tải xuống file zip
+                    const content = await zip.generateAsync({ type: 'blob' });
+                    saveAs(content, `Xac_nhan_dat_hang_${appData.selectedOrders.size}_don.zip`);
+                }
+
+            } catch (error) {
+                console.error('Error exporting to Word:', error);
+                alert(`Lỗi khi xuất Word: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
         }
 
         // Cập nhật hàm khởi tạo để sử dụng dữ liệu đã tải
@@ -966,25 +1105,6 @@
 
         // Initialize when document is ready
         document.addEventListener('DOMContentLoaded', initializeApp);
-
-        document.addEventListener('contextmenu', function (e) {
-            e.preventDefault();
-        }, false);
-
-        document.onkeydown = function (e) {
-            if (e.keyCode == 123) {
-                return false;
-            }
-            if (e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) {
-                return false;
-            }
-            if (e.ctrlKey && e.shiftKey && e.keyCode == 'J'.charCodeAt(0)) {
-                return false;
-            }
-            if (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) {
-                return false;
-            }
-        };
     </script>
 </body>
 
