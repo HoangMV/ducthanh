@@ -151,6 +151,11 @@
             opacity: 0;
         }
 
+        #loadingOverlay {
+            z-index: 9999;
+            /* Một số cao hơn so với các modal khác */
+        }
+
         @keyframes fadeOut {
             from {
                 opacity: 1;
@@ -733,7 +738,7 @@
             // Kiểm tra kết nối API
             async testAppSheetConnection() {
                 try {
-                    this.showLoading('Đang kiểm tra kết nối...');
+                    this.showLoading('Đang kết nối...');
 
                     const response = await axios({
                         method: 'POST',
@@ -757,7 +762,6 @@
 
                     if (response.status === 200) {
                         console.log('Kết nối API thành công:', response);
-                        this.showAlert('success', 'Kết nối thành công!');
                         return true;
                     } else {
                         throw new Error('Phản hồi không thành công');
@@ -931,8 +935,16 @@
 
             // Hiển thị loading
             showLoading(message = 'Đang xử lý...') {
-                document.getElementById('loadingText').textContent = message;
-                document.getElementById('loadingOverlay').classList.remove('hidden');
+                const loadingText = document.getElementById('loadingText');
+                const loadingOverlay = document.getElementById('loadingOverlay');
+
+                if (loadingText) loadingText.textContent = message;
+                if (loadingOverlay) {
+                    loadingOverlay.classList.remove('hidden');
+                    console.log('Loading overlay displayed'); // Debug
+                } else {
+                    console.error('Loading overlay element not found');
+                }
             }
 
             // Ẩn loading
@@ -980,7 +992,6 @@
             // Tải danh sách khách hàng
             async loadKhachHangList() {
                 try {
-                    this.showLoading('Đang tải danh sách khách hàng...');
 
                     const response = await axios({
                         method: 'POST',
@@ -1637,15 +1648,47 @@
                     });
 
                     if (response.status === 200) {
-                        // Thêm khách hàng mới vào danh sách
-                        const select = document.getElementById('khachHang');
-                        const option = document.createElement('option');
-                        option.value = khachHangData['ID khách hàng'];
-                        option.textContent = khachHangData['Tên khách hàng đầy đủ'];
-                        select.appendChild(option);
+                        // Generate a unique ID for the new customer if not provided by the API
+                        // This is needed as a temporary ID until we reload the full list
+                        const newCustomerId = khachHangData['Mã khách hàng'] ||
+                            'NEW_' + Date.now();
 
-                        // Chọn khách hàng mới thêm
-                        select.value = khachHangData['ID khách hàng'];
+                        // Add the new customer to our internal list
+                        const newCustomer = {
+                            'ID khách hàng': newCustomerId,
+                            'Tên khách hàng đầy đủ': khachHangData['Tên khách hàng đầy đủ']
+                        };
+                        this.khachHangList.push(newCustomer);
+
+                        // Recreate the Choices.js instance with the updated list
+                        if (this.khachHangChoices) {
+                            this.khachHangChoices.destroy();
+                        }
+
+                        // Rebuild the select element
+                        const khachHangSelect = document.getElementById('khachHang');
+                        khachHangSelect.innerHTML = '<option value="">-- Chọn khách hàng --</option>';
+
+                        this.khachHangList.forEach(khachHang => {
+                            const option = document.createElement('option');
+                            option.value = khachHang['ID khách hàng'] || khachHang.ID;
+                            option.textContent = khachHang['Tên khách hàng đầy đủ'] || khachHang.Ten;
+                            khachHangSelect.appendChild(option);
+                        });
+
+                        // Reinitialize Choices.js
+                        this.khachHangChoices = new Choices('#khachHang', {
+                            searchEnabled: true,
+                            searchPlaceholderValue: 'Nhập tên để tìm...',
+                            noResultsText: 'Không tìm thấy khách hàng',
+                            itemSelectText: 'Chọn',
+                            removeItemButton: true,
+                            searchFields: ['label'],
+                            position: 'bottom'
+                        });
+
+                        // Set the newly created customer as selected
+                        this.khachHangChoices.setChoiceByValue(newCustomerId);
 
                         // Đóng modal và hiện thông báo
                         this.closeKhachHangModal();
@@ -2438,25 +2481,6 @@
 
             const orderManager = new OrderManager(appId, accessKey);
         });
-
-        document.addEventListener('contextmenu', function (e) {
-            e.preventDefault();
-        }, false);
-
-        document.onkeydown = function (e) {
-            if (e.keyCode == 123) {
-                return false;
-            }
-            if (e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) {
-                return false;
-            }
-            if (e.ctrlKey && e.shiftKey && e.keyCode == 'J'.charCodeAt(0)) {
-                return false;
-            }
-            if (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) {
-                return false;
-            }
-        };
     </script>
 
 
