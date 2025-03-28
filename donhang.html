@@ -254,7 +254,7 @@
                                 <i class="fas fa-barcode text-gray-400"></i>
                             </div>
                             <input type="text" id="maDonHang"
-                                class="custom-input w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm bg-gray-50 text-gray-800">
+                                class="custom-input w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm bg-white">
                         </div>
                     </div>
 
@@ -387,7 +387,7 @@
                             <div class="absolute top-3 left-3 pointer-events-none">
                                 <i class="fas fa-sticky-note text-gray-400"></i>
                             </div>
-                            <textarea id="ghiChu"
+                            <textarea id="ghiChu" rows="1"
                                 class="custom-input w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm bg-white"></textarea>
                         </div>
                     </div>
@@ -589,8 +589,11 @@
 
                     <div class="form-group">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
-                        <input type="text" id="modalMoTa" class="w-full p-2 border border-gray-300 rounded-lg"></input>
+
+                        <textarea id="modalMoTa" class="w-full p-2 border border-gray-300 rounded-lg"
+                            rows="1"></textarea>
                     </div>
+
 
                     <div class="form-group">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Đơn vị tính</label>
@@ -668,10 +671,10 @@
 
 
 
-                    <div class="form-group">
+                    <div class="form-group lg:col-span-3">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Ghi chú</label>
                         <textarea id="modalGhiChu" class="w-full p-2 border border-gray-300 rounded-lg"
-                            rows="2"></textarea>
+                            rows="1"></textarea>
                     </div>
 
                     <div class="lg:col-span-3 flex justify-end space-x-3 pt-4 border-t border-gray-200">
@@ -860,10 +863,9 @@
                 document.getElementById('hangHoaDetailForm').addEventListener('submit', (e) => this.handleUpdateHangHoa(e));
 
                 // Sự kiện tính toán trong modal
-                ['modalSoLuong', 'modalDonGia', 'modalPhuPhiDieuChinh', 'modalThueSuat',
-                    'modalPhiQuanLy', 'modalTienHoanTra'].forEach(id => {
-                        document.getElementById(id).addEventListener('input', () => this.calculateModalValues());
-                    });
+                ['modalSoLuong', 'modalDonGia', 'modalPhuPhiDieuChinh', 'modalThueSuat', 'modalPhiQuanLy'].forEach(id => {
+                    document.getElementById(id).addEventListener('input', () => this.calculateModalValues());
+                });
 
                 // Expose window methods for HTML event handlers
                 window.deleteRow = (btn) => this.deleteRow(btn);
@@ -1220,43 +1222,53 @@
                 if (!row) return;
 
                 const inputs = row.querySelectorAll('input');
-                if (!inputs || inputs.length < 7) return; // Cập nhật để phù hợp với số lượng input mới
+                if (!inputs || inputs.length < 7) return;
 
                 const soLuong = parseFloat(inputs[2].value) || 0;
                 const donGia = parseFloat(inputs[3].value) || 0;
 
-                // Calculate basic values
+                // Tính giá trị cơ bản
                 const thanhTien = soLuong * donGia;
-                inputs[4].value = this.formatCurrency(thanhTien);
 
-                // Get additional values from data attributes
+                // Lấy các giá trị từ data attributes
                 const phuPhiDieuChinh = parseFloat(row.dataset.phuPhiDieuChinh) || 0;
                 const thueSuat = parseFloat(row.dataset.thueSuat) || 0;
                 const phiQuanLy = parseFloat(row.dataset.phiQuanLy) || 0;
                 const tienHoanTra = parseFloat(row.dataset.tienHoanTra) || 0;
 
-                // Calculate total value
+                // Tính giá trị tổng
                 const thanhTienSauDieuChinh = soLuong * (donGia + phuPhiDieuChinh);
                 const tienThue = thanhTienSauDieuChinh * (thueSuat / 100);
-                const phiQuanLyTien = thanhTienSauDieuChinh * (phiQuanLy / 100);
-                const tongGiaTri = thanhTienSauDieuChinh + tienThue + phiQuanLyTien - tienHoanTra;
 
-                // Update VAT value
-                inputs[5].value = this.formatCurrency(tienThue);
+                // Tính chi phí quản lý theo phần chênh lệch giữa thành tiền sau điều chỉnh và thành tiền gốc
+                const chiPhiQuanLy = phiQuanLy * (thanhTienSauDieuChinh - thanhTien) / 100;
 
-                // Update total value with formatted currency
-                inputs[6].value = this.formatCurrency(tongGiaTri);
+                // Tính tổng giá trị theo công thức
+                const tongGiaTri = thanhTienSauDieuChinh + tienThue;
 
-                // Store raw values in data attributes for calculations
+                // Cập nhật giá trị hiển thị
+                inputs[4].value = this.formatCurrency(thanhTien); // Thành tiền
+                inputs[5].value = this.formatCurrency(tienThue);  // VAT
+                inputs[6].value = this.formatCurrency(tongGiaTri); // Tổng giá trị
+
+                // Lưu giá trị thô vào data attributes để tính toán
                 row.dataset.thanhTien = thanhTien;
                 row.dataset.donGiaDieuChinh = donGia + phuPhiDieuChinh;
                 row.dataset.thanhTienSauDieuChinh = thanhTienSauDieuChinh;
                 row.dataset.tienThue = tienThue;
                 row.dataset.tongGiaTri = tongGiaTri;
 
-                // Update order totals
+                // Cập nhật tổng giá trị đơn hàng
                 this.updateOrderTotals();
             }
+
+            // Thêm một hàm helper để tính tiền hoàn trả dựa trên công thức
+            calculateTienHoanTra(thanhTienHang, thanhTienSauDieuChinh, tienThue, phiQuanLy, tongGiaTri) {
+                // Công thức: [Tiền hoàn trả] = [Tổng giá trị] - ([Thành tiền hàng] + [Tiền thuế] + [Phí quản lý]*([Thành tiền sau điều chỉnh]-[Thành tiền hàng]))
+                const chiPhiQuanLy = (phiQuanLy / 100) * (thanhTienSauDieuChinh - thanhTienHang);
+                return tongGiaTri - (thanhTienHang + tienThue + chiPhiQuanLy);
+            }
+
             // Cập nhật tổng giá trị đơn hàng
             updateOrderTotals() {
                 const rows = document.querySelectorAll('#chiTietTableBody tr');
@@ -1305,7 +1317,7 @@
                         'Tiền thuế': parseFloat(row.dataset.tienThue) || 0,
                         'Phí suất quản lý điều chỉnh': parseFloat(row.dataset.phiQuanLy) || 0,
                         'Tổng giá trị': parseFloat(row.dataset.tongGiaTri) || 0,
-                        'Tiền hoàn trả cho khách': parseFloat(row.dataset.tienHoanTra) || 0,
+                        'Tiền hoàn trả cho khách': parseInt(row.dataset.tienHoanTra.replace(/\./g, '')) || 0, // Xử lý chuỗi có dấu phân cách hàng nghìn
                         'Ghi chú': row.dataset.ghiChu || '',
                         'Người tạo': 'System',
                         'Ngày tạo': this.formatDate(new Date())
@@ -1506,7 +1518,7 @@
             }
 
             // Tính toán giá trị trong modal
-            // In the calculateModalValues function, update the calculation:
+            // Cập nhật hàm calculateModalValues
             calculateModalValues() {
                 if (!this.currentEditingRow) return;
 
@@ -1516,24 +1528,27 @@
                 const thueSuat = parseFloat(document.getElementById('modalThueSuat').value) || 0;
                 const phiQuanLy = parseFloat(document.getElementById('modalPhiQuanLy').value) || 0;
 
-                // Basic calculations
+                // Các tính toán cơ bản
                 const thanhTienHang = soLuong * donGia;
                 const donGiaDieuChinh = donGia + phuPhiDieuChinh;
                 const thanhTienSauDieuChinh = soLuong * donGiaDieuChinh;
                 const tienThue = thanhTienSauDieuChinh * (thueSuat / 100);
 
-                // Calculate total value
+                // Tính chi phí quản lý (là % của phần chênh lệch thành tiền)
+                const chiPhiQuanLy = phiQuanLy * (thanhTienSauDieuChinh - thanhTienHang) / 100;
+
+                // Tính tiền hoàn trả theo công thức
+                const tienHoanTra = (thanhTienSauDieuChinh + tienThue) - (thanhTienHang + tienThue + chiPhiQuanLy);
+
+                // Tính tổng giá trị cuối cùng
                 const tongGiaTri = thanhTienSauDieuChinh + tienThue;
 
-                // Calculate refund amount using new formula
-                const tienHoanTra = tongGiaTri - (thanhTienHang + tienThue + phiQuanLy * (thanhTienSauDieuChinh - thanhTienHang));
-
-                // Update modal fields with formatted currency
+                // Cập nhật các trường trong modal với định dạng tiền tệ
                 document.getElementById('modalThanhTienHang').value = this.formatCurrency(thanhTienHang);
                 document.getElementById('modalDonGiaDieuChinh').value = this.formatCurrency(donGiaDieuChinh);
                 document.getElementById('modalThanhTienSauDieuChinh').value = this.formatCurrency(thanhTienSauDieuChinh);
                 document.getElementById('modalTienThue').value = this.formatCurrency(tienThue);
-                document.getElementById('modalTienHoanTra').value = this.formatCurrency(tienHoanTra);
+                document.getElementById('modalTienHoanTra').value = this.formatCurrency(tienHoanTra > 0 ? tienHoanTra : 0);
                 document.getElementById('modalTongGiaTri').value = this.formatCurrency(tongGiaTri);
             }
 
