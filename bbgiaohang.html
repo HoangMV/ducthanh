@@ -16,6 +16,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.37.11/docxtemplater.js"></script>
     <script src="https://unpkg.com/pizzip@3.1.4/dist/pizzip.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap');
 
@@ -183,6 +185,7 @@
             display: block;
             margin-top: 5px;
             color: #666;
+            white-space: pre-line;
         }
 
         .print-button-container {
@@ -267,7 +270,7 @@
         <button id="printButton" onclick="window.print()">
             <i class="fas fa-print"></i> In xác nhận
         </button>
-        <button id="excelButton" onclick="exportToExcelTemplate()">
+        <button id="excelButton" onclick="exportToExcelWithExcelJS()">
             <i class="fas fa-file-excel"></i> Xuất Excel
         </button>
         <button id="exportButton" onclick="exportToWordTemplate()">
@@ -730,13 +733,13 @@
                 alert('Có lỗi khi xuất file Word. Vui lòng thử lại sau.');
             }
         }
+
         // Add this function after the exportToWordTemplate function
-        async function exportToExcelTemplate() {
+        async function exportToExcelWithExcelJS() {
             try {
-                // Show loading indicator
                 document.getElementById('loading').style.display = 'block';
 
-                // Get basic information
+                // Lấy thông tin cơ bản
                 const orderNumber = document.getElementById('order-number').textContent;
                 const orderDate = document.getElementById('order-date').textContent;
                 const customerName = document.getElementById('customer-name').textContent;
@@ -746,13 +749,142 @@
                 const recipientPhone = document.getElementById('recipient-phone').textContent;
                 const deliveryAddress = document.getElementById('delivery-address').textContent;
 
-                // Get products from table
+                // Tạo workbook và worksheet mới
+                const workbook = new ExcelJS.Workbook();
+                const worksheet = workbook.addWorksheet('Biên bản giao hàng');
+
+                // Tải logo từ URL
+                const logoResponse = await fetch('https://hoangmv.github.io/ducthanh/ducthanhlogo.png');
+                const logoArrayBuffer = await logoResponse.arrayBuffer();
+
+                // Thêm logo vào worksheet
+                const logoId = workbook.addImage({
+                    buffer: logoArrayBuffer,
+                    extension: 'png',
+                });
+
+                // Chèn logo vào ô A1 với kích thước phù hợp
+                worksheet.addImage(logoId, {
+                    tl: { col: 0, row: 0 },           // Top-left corner (ô A1)
+                    br: { col: 1.5, row: 3 },         // Bottom-right corner
+                    editAs: 'oneCell'                  // Giữ tỷ lệ khi điều chỉnh kích thước ô
+                });
+
+                // Thêm header công ty (đặt bên cạnh logo)
+                worksheet.mergeCells('C1:I1');
+                const headerCell = worksheet.getCell('C1');
+                headerCell.value = 'CÔNG TY TNHH SẢN XUẤT VÀ DỊCH VỤ ĐỨC THÀNH';
+                headerCell.font = { bold: true, size: 14 };
+                headerCell.alignment = { horizontal: 'right' };
+
+                worksheet.mergeCells('C2:I2');
+                worksheet.getCell('C2').value = 'VPGD: Số 11/49/64 Nguyễn Lương Bằng, Ô Chợ Dừa, Đống Đa, Hà Nội';
+                worksheet.getCell('C2').alignment = { horizontal: 'right' };
+
+                worksheet.mergeCells('C3:I3');
+                worksheet.getCell('C3').value = 'Số ĐKKD: 0108325268. Điện thoại: 024 6682 6686 | Email: info@inducthanh.vn';
+                worksheet.getCell('C3').alignment = { horizontal: 'right' };
+
+                // Tiêu đề biên bản giao hàng
+                worksheet.mergeCells('A5:I5');
+                const titleCell = worksheet.getCell('A5');
+                titleCell.value = 'BIÊN BẢN GIAO HÀNG';
+                titleCell.font = { bold: true, size: 16 };
+                titleCell.alignment = { horizontal: 'center' };
+
+                // Thông tin đơn hàng
+                worksheet.mergeCells('A6:I6');
+                worksheet.getCell('A6').value = `Số đơn hàng: ${orderNumber} - Ngày đặt hàng: ${orderDate}`;
+                worksheet.getCell('A6').alignment = { horizontal: 'center' };
+
+                // Thông tin khách hàng
+                worksheet.mergeCells('A8:I8');
+                worksheet.getCell('A8').value = `Khách hàng: ${customerName}`;
+                worksheet.getCell('A8').fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'D6E7F2' }
+                };
+
+                worksheet.mergeCells('A9:I9');
+                worksheet.getCell('A9').value = `Mã số thuế: ${taxCode}`;
+                worksheet.getCell('A9').fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'D6E7F2' }
+                };
+
+                worksheet.mergeCells('A10:I10');
+                worksheet.getCell('A10').value = `Địa chỉ hoá đơn: ${invoiceAddress}`;
+                worksheet.getCell('A10').fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'D6E7F2' }
+                };
+
+                // Thông tin giao hàng
+                worksheet.mergeCells('A11:E11');
+                worksheet.getCell('A11').value = `Người nhận hàng: ${recipientName}`;
+                worksheet.getCell('A11').fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'D6E7F2' }
+                };
+
+                worksheet.mergeCells('F11:I11');
+                worksheet.getCell('F11').value = `SĐT người nhận: ${recipientPhone}`;
+                worksheet.getCell('F11').fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'D6E7F2' }
+                };
+
+                worksheet.mergeCells('A12:I12');
+                worksheet.getCell('A12').value = `Địa chỉ giao hàng: ${deliveryAddress}`;
+                worksheet.getCell('A12').fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'D6E7F2' }
+                };
+
+                // Thêm tiêu đề Chi tiết hàng hoá
+                worksheet.mergeCells('A14:I14');
+                worksheet.getCell('A14').value = 'Điều 1: Số lượng, quy cách sản phẩm bàn giao cho Khách hàng';
+                worksheet.getCell('A14').font = { italic: true };
+
+                // Thêm header bảng - Sửa lại phần này
+                const headerRow = worksheet.addRow(['STT', 'HÀNG HÓA', '', '', '', '', '', 'ĐVT', 'SL']);
+                worksheet.mergeCells('B15:G15'); // Merge từ B đến G cho cột HÀNG HÓA
+
+                // Style cho header
+                headerRow.eachCell((cell) => {
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: '9fc5e8' }
+                    };
+                    cell.font = { bold: true };
+                    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
+
+                // Lấy dữ liệu sản phẩm từ bảng HTML
+                let currentRow = 16;
                 const rows = document.querySelectorAll('#product-table-body tr');
-                const products = [];
+
+                console.log("Số lượng dòng sản phẩm:", rows.length);
 
                 rows.forEach((row, index) => {
                     const cells = row.cells;
-                    if (cells.length === 4) {
+                    console.log(`Dòng ${index + 1}: số lượng cột = ${cells.length}`);
+
+                    if (cells.length === 4) { // 4 cột: STT, HÀNG HÓA, ĐVT, SL
+                        // Trích xuất thông tin sản phẩm
                         const cellContent = cells[1].innerHTML;
                         const productDiv = document.createElement('div');
                         productDiv.innerHTML = cellContent;
@@ -760,111 +892,122 @@
                         const strongElement = productDiv.querySelector('strong');
                         const descElement = productDiv.querySelector('.product-description');
 
-                        products.push({
-                            stt: index + 1,
-                            tenHangHoa: strongElement ? strongElement.textContent.trim() : '',
-                            moTa: descElement ? descElement.textContent.trim() : '',
-                            dvt: cells[2].textContent.trim(),
-                            soLuong: cells[3].textContent.trim()
+                        const tenHangHoa = strongElement ? strongElement.textContent.trim() : '';
+                        const moTa = descElement ? descElement.textContent.trim() : '';
+
+                        // Phân tích số lượng
+                        const quantity = parseFloat(cells[3].textContent.trim().replace(/[,.]/g, '')) || 0;
+
+                        // Thêm dòng sản phẩm với cấu trúc 9 cột (A-I)
+                        const productRow = worksheet.addRow([
+                            index + 1,                       // STT (A)
+                            tenHangHoa,                      // HÀNG HÓA (B)
+                            '',                              // C
+                            '',                              // D
+                            '',                              // E
+                            '',                              // F
+                            '',                              // G
+                            cells[2].textContent.trim(),     // ĐVT (H)
+                            quantity                         // SL (I)
+                        ]);
+                        worksheet.mergeCells(`B${currentRow}:G${currentRow}`); // Merge B-G cho HÀNG HÓA
+
+                        // Style cho các ô
+                        productRow.eachCell((cell) => {
+                            cell.border = {
+                                top: { style: 'thin' },
+                                left: { style: 'thin' },
+                                bottom: { style: 'thin' },
+                                right: { style: 'thin' }
+                            };
                         });
-                    }
-                });
 
-                // Load Excel template
-                const response = await fetch('https://hoangmv.github.io/templates/bbgiaohang_template.xlsx');
-                if (!response.ok) {
-                    throw new Error('Không thể tải template Excel');
-                }
-                const templateArrayBuffer = await response.arrayBuffer();
-
-                // Create workbook from template
-                const workbook = XLSX.read(templateArrayBuffer, { type: 'array' });
-                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-
-                // Fill basic information
-                XLSX.utils.sheet_add_aoa(worksheet, [[orderNumber]], { origin: 'D8' });
-                XLSX.utils.sheet_add_aoa(worksheet, [[orderDate]], { origin: 'H8' });
-                XLSX.utils.sheet_add_aoa(worksheet, [[customerName]], { origin: 'C10' });
-                XLSX.utils.sheet_add_aoa(worksheet, [[taxCode]], { origin: 'C11' });
-                XLSX.utils.sheet_add_aoa(worksheet, [[invoiceAddress]], { origin: 'C12' });
-                XLSX.utils.sheet_add_aoa(worksheet, [[recipientName]], { origin: 'C13' });
-                XLSX.utils.sheet_add_aoa(worksheet, [[recipientPhone]], { origin: 'H13' });
-                XLSX.utils.sheet_add_aoa(worksheet, [[deliveryAddress]], { origin: 'C14' });
-
-                // Update the product row merging in exportToExcelTemplate function:
-
-                // Fill products with adjusted column merging
-                let currentRow = 18;
-                // In the exportToExcelTemplate function, update the products section:
-
-                products.forEach((product) => {
-                    // Product row with all columns
-                    XLSX.utils.sheet_add_aoa(worksheet, [[
-                        product.stt,
-                        product.tenHangHoa,
-                        '',     // Empty columns C to F
-                        '',
-                        '',
-                        '',
-                        product.dvt,      // Column G
-                        product.soLuong   // Column H
-                    ]], { origin: `A${currentRow}` });
-
-                    // Merge product name cells (column B to F)
-                    if (!worksheet['!merges']) worksheet['!merges'] = [];
-                    worksheet['!merges'].push({
-                        s: { r: currentRow - 1, c: 1 },  // Start at column B (index 1)
-                        e: { r: currentRow - 1, c: 5 }   // End at column F (index 5)
-                    });
-
-                    currentRow++;
-
-                    // Add description if exists
-                    if (product.moTa) {
-                        XLSX.utils.sheet_add_aoa(worksheet, [[
-                            '',
-                            product.moTa,
-                            '',           // Empty columns C to F
-                            '',
-                            '',
-                            '',
-                            '',           // Keep DVT column G empty
-                            ''           // Keep SoLuong column H empty
-                        ]], { origin: `A${currentRow}` });
-
-                        // Merge description cells (column B to F)
-                        worksheet['!merges'].push({
-                            s: { r: currentRow - 1, c: 1 },  // Start at column B (index 1)
-                            e: { r: currentRow - 1, c: 5 }   // End at column F (index 5)
-                        });
+                        // Căn lề cho các loại dữ liệu
+                        productRow.getCell(1).alignment = { horizontal: 'center' }; // STT (A)
+                        productRow.getCell(2).alignment = { horizontal: 'left' };   // Tên hàng (B)
+                        productRow.getCell(8).alignment = { horizontal: 'center' }; // ĐVT (H)
+                        productRow.getCell(9).alignment = { horizontal: 'center' }; // SL (I)
 
                         currentRow++;
+
+                        // Nếu có mô tả, thêm dòng mô tả
+                        if (moTa) {
+                            const descRow = worksheet.addRow([
+                                '',         // STT (A)
+                                moTa,       // Mô tả (B)
+                                '',         // C
+                                '',         // D
+                                '',         // E
+                                '',         // F
+                                '',         // G
+                                '',         // ĐVT (H)
+                                ''          // SL (I)
+                            ]);
+                            worksheet.mergeCells(`B${currentRow}:G${currentRow}`); // Merge B-G cho mô tả
+
+                            // Style cho dòng mô tả
+                            descRow.eachCell((cell) => {
+                                cell.border = {
+                                    top: { style: 'thin' },
+                                    left: { style: 'thin' },
+                                    bottom: { style: 'thin' },
+                                    right: { style: 'thin' }
+                                };
+                            });
+
+                            descRow.getCell(2).alignment = { horizontal: 'left' };
+                            descRow.getCell(2).font = { color: { argb: 'FF666666' } };
+
+                            currentRow++;
+                        }
                     }
                 });
 
-                // Add conclusion and signature section
-                XLSX.utils.sheet_add_aoa(worksheet, [['Điều 2: Kết luận']], { origin: `A${currentRow}` });
+                // Kết luận
+                worksheet.mergeCells(`A${currentRow}:I${currentRow}`);
+                const paymentInfoCell = worksheet.getCell(`A${currentRow}`);
+                paymentInfoCell.value = 'Điều 2: Kết luận';
+                paymentInfoCell.font = { bold: true };
                 currentRow++;
-                XLSX.utils.sheet_add_aoa(worksheet, [['- Hai bên đã giao, nhận hàng hóa đầy đủ số lượng và quy cách như trong Điều 1.']], { origin: `A${currentRow}` });
-                currentRow++;
-                XLSX.utils.sheet_add_aoa(worksheet, [['- Biên bản này được lập thành 02 bản có giá trị pháp lý ngang nhau, mỗi bên giữ 01 bản.']], { origin: `A${currentRow}` });
 
-                // Add signature section
-                currentRow += 3;
-                XLSX.utils.sheet_add_aoa(worksheet, [['BÊN MUA']], { origin: `C${currentRow}` });
-                XLSX.utils.sheet_add_aoa(worksheet, [['BÊN BÁN']], { origin: `G${currentRow}` });
+                worksheet.mergeCells(`A${currentRow}:I${currentRow}`);
+                const paymentInfoCell2 = worksheet.getCell(`A${currentRow}`);
+                paymentInfoCell2.value = '- Hai bên đã giao, nhận hàng hóa đầy đủ số lượng và quy cách như trong Điều 1.';
                 currentRow++;
-                XLSX.utils.sheet_add_aoa(worksheet, [['(Ký, họ tên)']], { origin: `C${currentRow}` });
-                XLSX.utils.sheet_add_aoa(worksheet, [['(Ký, họ tên)']], { origin: `G${currentRow}` });
 
-                // Generate and save file
-                const excelOutput = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-                const blob = new Blob([excelOutput], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                const fileName = `Bien_ban_giao_hang_${orderNumber}.xlsx`;
-                saveAs(blob, fileName);
+                worksheet.mergeCells(`A${currentRow}:I${currentRow}`);
+                const paymentInfoCell3 = worksheet.getCell(`A${currentRow}`);
+                paymentInfoCell3.value = '- Biên bản này được lập thành 02 bản có giá trị pháp lý ngang nhau, mỗi bên giữ 01 bản.';
+                currentRow += 2;
+
+                // Thêm phần chữ ký
+                const buyerCell = worksheet.getCell(`C${currentRow}`);
+                buyerCell.value = 'BÊN MUA';
+                buyerCell.font = { bold: true };
+                buyerCell.alignment = { horizontal: 'center' };
+
+                const sellerCell = worksheet.getCell(`G${currentRow}`);
+                sellerCell.value = 'BÊN BÁN';
+                sellerCell.font = { bold: true };
+                sellerCell.alignment = { horizontal: 'center' };
+
+                currentRow++;
+
+                worksheet.getCell(`C${currentRow}`).value = '(Ký, họ tên)';
+                worksheet.getCell(`C${currentRow}`).alignment = { horizontal: 'center' };
+                worksheet.getCell(`C${currentRow}`).font = { italic: true };
+
+                worksheet.getCell(`G${currentRow}`).value = '(Ký, họ tên)';
+                worksheet.getCell(`G${currentRow}`).alignment = { horizontal: 'center' };
+                worksheet.getCell(`G${currentRow}`).font = { italic: true };
+
+                // Tạo blob và tải xuống
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                saveAs(blob, `Bien_ban_giao_hang_${orderNumber}.xlsx`);
 
             } catch (error) {
-                console.error('Error exporting to Excel template:', error);
+                console.error('Error exporting to Excel:', error);
                 alert('Có lỗi khi xuất file Excel: ' + error.message);
             } finally {
                 document.getElementById('loading').style.display = 'none';
