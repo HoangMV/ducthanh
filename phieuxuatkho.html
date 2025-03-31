@@ -15,6 +15,8 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.37.11/docxtemplater.js"></script>
     <script src="https://unpkg.com/pizzip@3.1.4/dist/pizzip.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap');
@@ -187,6 +189,7 @@
             display: block;
             margin-top: 5px;
             color: #666;
+            white-space: pre-line;
         }
 
         .print-button-container {
@@ -271,7 +274,8 @@
         <button id="printButton" onclick="window.print()">
             <i class="fas fa-print"></i> In xác nhận
         </button>
-        <button id="excelButton" onclick="exportToExcelTemplate()">
+    
+        <button id="excelButton" onclick="exportToExcelWithExcelJS()">
             <i class="fas fa-file-excel"></i> Xuất Excel
         </button>
         <button id="exportButton" onclick="exportToWordTemplate()">
@@ -803,261 +807,7 @@
             }
         }
 
-        // Add this function after the exportToWordTemplate function
-        async function exportToExcelTemplate() {
-            try {
-                // Show loading indicator
-                document.getElementById('loading').style.display = 'block';
-
-                // Get basic order information
-                const orderNumber = document.getElementById('order-number').textContent;
-                const orderDate = document.getElementById('order-date').textContent;
-                const customerName = document.getElementById('customer-name').textContent;
-                const taxCode = document.getElementById('tax-code').textContent;
-                const invoiceAddress = document.getElementById('invoice-address').textContent;
-                const recipientName = document.getElementById('recipient-name').textContent;
-                const recipientPhone = document.getElementById('recipient-phone').textContent;
-                const deliveryAddress = document.getElementById('delivery-address').textContent;
-                const totalInWords = document.getElementById('total-in-words').textContent.replace('Số tiền viết bằng chữ: ', '');
-
-                // Calculate totals
-                let subtotal = 0;
-                const rows = document.querySelectorAll('#product-table-body tr');
-                const products = [];
-
-                rows.forEach((row, index) => {
-                    const cells = row.cells;
-                    if (cells.length === 6) {
-                        // Extract product name and description
-                        const cellContent = cells[1].innerHTML;
-                        const productDiv = document.createElement('div');
-                        productDiv.innerHTML = cellContent;
-
-                        const strongElement = productDiv.querySelector('strong');
-                        const descElement = productDiv.querySelector('.product-description');
-
-                        const tenHangHoa = strongElement ? strongElement.textContent.trim() : '';
-                        const moTa = descElement ? descElement.textContent.trim() : '';
-
-                        // Parse numeric values
-                        const quantity = parseFloat(cells[3].textContent.trim().replace(/[,.]/g, '')) || 0;
-                        const unitPrice = parseFloat(cells[4].textContent.trim().replace(/[,.]/g, '')) || 0;
-                        const total = parseFloat(cells[5].textContent.trim().replace(/[,.]/g, '')) || 0;
-                        subtotal += total;
-
-                        products.push({
-                            stt: index + 1,
-                            tenHangHoa: tenHangHoa,
-                            moTa: moTa,
-                            dvt: cells[2].textContent.trim(),
-                            soLuong: quantity,
-                            donGia: unitPrice,
-                            thanhTien: total
-                        });
-                    }
-                });
-
-                // Calculate tax and total
-                const tax = Math.round(subtotal * 0.08);
-                const grandTotal = subtotal + tax;
-
-                // Load Excel template from server
-                const response = await fetch('https://hoangmv.github.io/templates/phieuxuatkho_template.xlsx');
-                if (!response.ok) {
-                    throw new Error('Không thể tải template Excel');
-                }
-                const templateArrayBuffer = await response.arrayBuffer();
-
-                // Load the template workbook
-                const workbook = XLSX.read(templateArrayBuffer, { type: 'array' });
-                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-
-
-                // --- Điền thông tin theo đúng vị trí trong mẫu Excel ---
-
-                // Thông tin đơn hàng ở hàng 8
-                XLSX.utils.sheet_add_aoa(worksheet, [[`${orderNumber}`]], { origin: 'D8' }); // Số báo giá
-                XLSX.utils.sheet_add_aoa(worksheet, [[orderDate]], { origin: 'H8' }); // Ngày báo giá
-
-                // Thông tin khách hàng ở các hàng 10, 11, 12
-                XLSX.utils.sheet_add_aoa(worksheet, [[customerName]], { origin: 'C10' }); // Khách hàng
-                XLSX.utils.sheet_add_aoa(worksheet, [[taxCode]], { origin: 'C11' }); // Mã số thuế
-                XLSX.utils.sheet_add_aoa(worksheet, [[invoiceAddress]], { origin: 'C12' }); // Địa chỉ hóa đơn
-
-                // // Thông tin người nhận và địa chỉ giao hàng
-                // XLSX.utils.sheet_add_aoa(worksheet, [[recipientName]], { origin: 'B14' }); // Người nhận hàng
-                // XLSX.utils.sheet_add_aoa(worksheet, [[recipientPhone]], { origin: 'F14' }); // SĐT người nhận
-                // XLSX.utils.sheet_add_aoa(worksheet, [[deliveryAddress]], { origin: 'B15' }); // Địa chỉ giao hàng
-
-                // --- Điền sản phẩm ---
-                let currentRow = 18;
-
-                // Kiểm tra nếu không có sản phẩm nào từ dữ liệu HTML, tạo sản phẩm mẫu
-                if (products.length === 0) {
-                    // Thêm sản phẩm mẫu giống như trong hình mẫu
-                    XLSX.utils.sheet_add_aoa(worksheet, [[
-                        1,
-                        "Thép xây dựng CT2",
-                        "",
-                        "",
-                        "",
-                        "Thanh",
-                        20,
-                        200000,
-                        4000000
-                    ]], { origin: `A18` });
-
-                    // Gộp ô cho tên sản phẩm
-                    if (!worksheet['!merges']) worksheet['!merges'] = [];
-                    worksheet['!merges'].push({ s: { r: 17, c: 1 }, e: { r: 17, c: 4 } });
-
-                    // Thêm mô tả
-                    XLSX.utils.sheet_add_aoa(worksheet, [[
-                        "",
-                        "Thép chịu lực",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        ""
-                    ]], { origin: `A19` });
-
-                    // Gộp ô cho mô tả
-                    worksheet['!merges'].push({ s: { r: 18, c: 1 }, e: { r: 18, c: 4 } });
-
-                    // Thêm sản phẩm thứ 2
-                    XLSX.utils.sheet_add_aoa(worksheet, [[
-                        2,
-                        "Gạch lát nền 60x60",
-                        "",
-                        "",
-                        "",
-                        "Thùng",
-                        5,
-                        450000,
-                        2250000
-                    ]], { origin: `A20` });
-
-                    // Gộp ô cho tên sản phẩm thứ 2
-                    worksheet['!merges'].push({ s: { r: 19, c: 1 }, e: { r: 19, c: 4 } });
-
-                    // Thêm mô tả sản phẩm thứ 2
-                    XLSX.utils.sheet_add_aoa(worksheet, [[
-                        "",
-                        "Gạch Eurotile",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        ""
-                    ]], { origin: `A21` });
-
-                    // Gộp ô cho mô tả sản phẩm thứ 2
-                    worksheet['!merges'].push({ s: { r: 20, c: 1 }, e: { r: 20, c: 4 } });
-
-                    currentRow = 22;
-
-                    // Set giá trị tổng
-                    subtotal = 6250000;
-                    tax = 500000;
-                    grandTotal = 6750000;
-                } else {
-                    // Sử dụng dữ liệu sản phẩm từ HTML
-                    products.forEach((product, index) => {
-                        // Điền thông tin sản phẩm với tên hàng hóa chiếm từ cột B đến E
-                        XLSX.utils.sheet_add_aoa(worksheet, [[
-                            product.stt,           // Cột A - STT
-                            product.tenHangHoa,    // Cột B - Tên hàng hóa
-                            "",                    // Cột C - Để trống
-                            "",                    // Cột D - Để trống
-                            "",                    // Cột E - Để trống
-                            product.dvt,           // Cột F - ĐVT
-                            product.soLuong,       // Cột G - SL
-                            product.donGia,        // Cột H - Đơn giá
-                            product.thanhTien      // Cột I - Thành tiền
-                        ]], { origin: `A${currentRow}` });
-
-                        // Gộp ô cho tên hàng hóa (B-E)
-                        if (!worksheet['!merges']) worksheet['!merges'] = [];
-                        worksheet['!merges'].push({ s: { r: currentRow - 1, c: 1 }, e: { r: currentRow - 1, c: 4 } });
-
-                        currentRow++;
-
-                        // Nếu có mô tả, thêm hàng mô tả
-                        if (product.moTa) {
-                            XLSX.utils.sheet_add_aoa(worksheet, [[
-                                "",                // Cột A - Để trống
-                                product.moTa,      // Cột B - Mô tả
-                                "",                // Cột C - Để trống
-                                "",                // Cột D - Để trống
-                                "",                // Cột E - Để trống
-                                "",                // Cột F - Để trống
-                                "",                // Cột G - Để trống
-                                "",                // Cột H - Để trống
-                                ""                 // Cột I - Để trống
-                            ]], { origin: `A${currentRow}` });
-
-                            // Gộp ô cho mô tả (B-E)
-                            worksheet['!merges'].push({ s: { r: currentRow - 1, c: 1 }, e: { r: currentRow - 1, c: 4 } });
-
-                            currentRow++;
-                        }
-                    });
-                }
-
-                // --- Thêm phần tổng cộng ---
-                XLSX.utils.sheet_add_aoa(worksheet, [["Cộng tiền hàng"]], { origin: `F${currentRow}` });
-                XLSX.utils.sheet_add_aoa(worksheet, [[subtotal]], { origin: `I${currentRow}` });
-                currentRow++;
-
-                XLSX.utils.sheet_add_aoa(worksheet, [["Thuế GTGT (8%)"]], { origin: `F${currentRow}` });
-                XLSX.utils.sheet_add_aoa(worksheet, [[tax]], { origin: `I${currentRow}` });
-                currentRow++;
-
-                XLSX.utils.sheet_add_aoa(worksheet, [["Tổng tiền thanh toán"]], { origin: `F${currentRow}` });
-                XLSX.utils.sheet_add_aoa(worksheet, [[grandTotal]], { origin: `I${currentRow}` });
-                currentRow += 2;
-
-                // After adding grand total row, add payment information
-                XLSX.utils.sheet_add_aoa(worksheet, [["Tạm ứng"]], { origin: `F${currentRow}` });
-                XLSX.utils.sheet_add_aoa(worksheet, [[parseFloat(order['Số tiền đã thu'] || 0)]], { origin: `I${currentRow}` });
-                currentRow++;
-
-                XLSX.utils.sheet_add_aoa(worksheet, [["Còn lại"]], { origin: `F${currentRow}` });
-                XLSX.utils.sheet_add_aoa(worksheet, [[parseFloat(order['Số tiền còn phải thu'] || 0)]], { origin: `I${currentRow}` });
-                currentRow += 2;
-
-                // --- Thêm số tiền bằng chữ ---
-                XLSX.utils.sheet_add_aoa(worksheet, [["Số tiền bằng chữ:"]], { origin: `A${currentRow}` });
-                XLSX.utils.sheet_add_aoa(worksheet, [[totalInWords]], { origin: `C${currentRow}` });
-                currentRow += 2;
-
-                // --- Thêm phần ký ---
-                XLSX.utils.sheet_add_aoa(worksheet, [["BÊN MUA"]], { origin: `C${currentRow}` });
-                XLSX.utils.sheet_add_aoa(worksheet, [["BÊN BÁN"]], { origin: `G${currentRow}` });
-                currentRow++;
-
-                XLSX.utils.sheet_add_aoa(worksheet, [["(Ký, họ tên)"]], { origin: `C${currentRow}` });
-                XLSX.utils.sheet_add_aoa(worksheet, [["(Ký, họ tên)"]], { origin: `G${currentRow}` });
-
-                // Generate the Excel file
-                const excelOutput = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-                const blob = new Blob([excelOutput], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                const fileName = `Phieu_xuat_kho_${orderNumber}.xlsx`;
-                saveAs(blob, fileName);
-            } catch (error) {
-                console.error('Error exporting to Excel template:', error);
-                alert('Có lỗi khi xuất file Excel. Vui lòng thử lại sau.');
-            } finally {
-                // Hide loading indicator
-                document.getElementById('loading').style.display = 'none';
-            }
-        }
-
+   
         // Thêm khai báo biến ở phạm vi toàn cục (bên ngoài các hàm)
         let order;
 
@@ -1083,6 +833,377 @@
                 console.error('Failed to initialize page:', error);
                 document.getElementById('error-message').textContent = 'Không thể tải dữ liệu đơn hàng. Vui lòng thử lại sau.';
                 document.getElementById('error-message').style.display = 'block';
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+
+        async function exportToExcelWithExcelJS() {
+            try {
+                document.getElementById('loading').style.display = 'block';
+
+                // Lấy thông tin cơ bản
+                const orderNumber = document.getElementById('order-number').textContent;
+                const orderDate = document.getElementById('order-date').textContent;
+                const customerName = document.getElementById('customer-name').textContent;
+                const taxCode = document.getElementById('tax-code').textContent;
+                const invoiceAddress = document.getElementById('invoice-address').textContent;
+                const recipientName = document.getElementById('recipient-name').textContent;
+                const recipientPhone = document.getElementById('recipient-phone').textContent;
+                const deliveryAddress = document.getElementById('delivery-address').textContent;
+                const totalInWords = document.getElementById('total-in-words').textContent;
+
+                // Tạo workbook và worksheet mới
+                const workbook = new ExcelJS.Workbook();
+                const worksheet = workbook.addWorksheet('Phiếu xuất kho');
+
+                // Tải logo từ URL
+                const logoResponse = await fetch('https://hoangmv.github.io/ducthanh/ducthanhlogo.png');
+                const logoArrayBuffer = await logoResponse.arrayBuffer();
+
+                // Thêm logo vào worksheet
+                const logoId = workbook.addImage({
+                    buffer: logoArrayBuffer,
+                    extension: 'png',
+                });
+
+                // Chèn logo vào ô A1 với kích thước phù hợp
+                worksheet.addImage(logoId, {
+                    tl: { col: 0, row: 0 },           // Top-left corner (ô A1)
+                    br: { col: 1.5, row: 3 },         // Bottom-right corner
+                    editAs: 'oneCell'                  // Giữ tỷ lệ khi điều chỉnh kích thước ô
+                });
+
+                // Thêm header công ty (đặt bên cạnh logo)
+                worksheet.mergeCells('C1:I1');
+                const headerCell = worksheet.getCell('C1');
+                headerCell.value = 'CÔNG TY TNHH SẢN XUẤT VÀ DỊCH VỤ ĐỨC THÀNH';
+                headerCell.font = { bold: true, size: 14 };
+                headerCell.alignment = { horizontal: 'right' };
+
+                worksheet.mergeCells('C2:I2');
+                worksheet.getCell('C2').value = 'VPGD: Số 11/49/64 Nguyễn Lương Bằng, Ô Chợ Dừa, Đống Đa, Hà Nội';
+                worksheet.getCell('C2').alignment = { horizontal: 'right' };
+
+                worksheet.mergeCells('C3:I3');
+                worksheet.getCell('C3').value = 'Số ĐKKD: 0108325268. Điện thoại: 024 6682 6686 | Email: info@inducthanh.vn';
+                worksheet.getCell('C3').alignment = { horizontal: 'right' };
+
+                // Tiêu đề phiếu xuất kho
+                worksheet.mergeCells('A5:I5');
+                const titleCell = worksheet.getCell('A5');
+                titleCell.value = 'PHIẾU XUẤT KHO BÁN HÀNG';
+                titleCell.font = { bold: true, size: 16 };
+                titleCell.alignment = { horizontal: 'center' };
+
+                // Thông tin đơn hàng
+                worksheet.mergeCells('A6:I6');
+                worksheet.getCell('A6').value = `Số đơn hàng: ${orderNumber} - Ngày đặt hàng: ${orderDate}`;
+                worksheet.getCell('A6').alignment = { horizontal: 'center' };
+
+                // Thông tin khách hàng
+                worksheet.mergeCells('A8:I8');
+                worksheet.getCell('A8').value = `Khách hàng: ${customerName}`;
+                worksheet.getCell('A8').fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFF2F9F2' }
+                };
+
+                worksheet.mergeCells('A9:I9');
+                worksheet.getCell('A9').value = `Mã số thuế: ${taxCode}`;
+                worksheet.getCell('A9').fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFF2F9F2' }
+                };
+
+                worksheet.mergeCells('A10:I10');
+                worksheet.getCell('A10').value = `Địa chỉ hoá đơn: ${invoiceAddress}`;
+                worksheet.getCell('A10').fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFF2F9F2' }
+                };
+
+                // Thông tin giao hàng
+                worksheet.mergeCells('A11:E11');
+                worksheet.getCell('A11').value = `Người nhận hàng: ${recipientName}`;
+                worksheet.getCell('A11').fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFF2F9F2' }
+                };
+
+                worksheet.mergeCells('F11:I11');
+                worksheet.getCell('F11').value = `SĐT người nhận: ${recipientPhone}`;
+                worksheet.getCell('F11').fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFF2F9F2' }
+                };
+
+                worksheet.mergeCells('A12:I12');
+                worksheet.getCell('A12').value = `Địa chỉ giao hàng: ${deliveryAddress}`;
+                worksheet.getCell('A12').fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFF2F9F2' }
+                };
+
+                // Thêm tiêu đề Chi tiết hàng hoá
+                worksheet.mergeCells('A14:I14');
+                worksheet.getCell('A14').value = 'Chi tiết hàng hoá:';
+                worksheet.getCell('A14').font = { italic: true };
+
+                // Thêm header bảng
+                const headerRow = worksheet.addRow(['STT', 'HÀNG HÓA', '', '', '', 'ĐVT', 'SL', 'ĐƠN GIÁ', 'THÀNH TIỀN']);
+                worksheet.mergeCells('B15:E15');
+                // Style cho header
+                headerRow.eachCell((cell) => {
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFA7D2A7' }
+                    };
+                    cell.font = { bold: true };
+                    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
+
+                // Lấy dữ liệu sản phẩm từ bảng HTML
+                let currentRow = 16;
+                let subtotal = 0;
+                const rows = document.querySelectorAll('#product-table-body tr');
+
+                rows.forEach((row, index) => {
+                    const cells = row.cells;
+                    if (cells.length === 6) {
+                        // Trích xuất thông tin sản phẩm
+                        const cellContent = cells[1].innerHTML;
+                        const productDiv = document.createElement('div');
+                        productDiv.innerHTML = cellContent;
+
+                        const strongElement = productDiv.querySelector('strong');
+                        const descElement = productDiv.querySelector('.product-description');
+
+                        const tenHangHoa = strongElement ? strongElement.textContent.trim() : '';
+                        const moTa = descElement ? descElement.textContent.trim() : '';
+
+                        // Phân tích các giá trị số
+                        const quantity = parseFloat(cells[3].textContent.trim().replace(/[,.]/g, '')) || 0;
+                        const unitPrice = parseFloat(cells[4].textContent.trim().replace(/[,.]/g, '')) || 0;
+                        const total = parseFloat(cells[5].textContent.trim().replace(/[,.]/g, '')) || 0;
+                        subtotal += total;
+
+                        // Thêm dòng sản phẩm
+                        const productRow = worksheet.addRow([index + 1, tenHangHoa, '', '', '', cells[2].textContent.trim(), quantity, unitPrice, total]);
+                        worksheet.mergeCells(`B${currentRow}:E${currentRow}`);
+
+                        // Style cho các ô
+                        productRow.eachCell((cell) => {
+                            cell.border = {
+                                top: { style: 'thin' },
+                                left: { style: 'thin' },
+                                bottom: { style: 'thin' },
+                                right: { style: 'thin' }
+                            };
+                        });
+
+                        // Căn lề cho các loại dữ liệu
+                        productRow.getCell(1).alignment = { horizontal: 'center' }; // STT
+                        productRow.getCell(2).alignment = { horizontal: 'left' };   // Tên hàng
+                        productRow.getCell(6).alignment = { horizontal: 'center' }; // ĐVT
+                        productRow.getCell(7).alignment = { horizontal: 'center' }; // SL
+                        productRow.getCell(8).alignment = { horizontal: 'right' };  // Đơn giá
+                        productRow.getCell(9).alignment = { horizontal: 'right' };  // Thành tiền
+
+                        // Format tiền tệ
+                        productRow.getCell(8).numFmt = '#,##0';
+                        productRow.getCell(9).numFmt = '#,##0';
+
+                        currentRow++;
+
+                        // Nếu có mô tả, thêm dòng mô tả
+                        if (moTa) {
+                            const descRow = worksheet.addRow(['', moTa, '', '', '', '', '', '', '']);
+                            worksheet.mergeCells(`B${currentRow}:E${currentRow}`);
+
+                            // Style cho dòng mô tả
+                            descRow.eachCell((cell) => {
+                                cell.border = {
+                                    top: { style: 'thin' },
+                                    left: { style: 'thin' },
+                                    bottom: { style: 'thin' },
+                                    right: { style: 'thin' }
+                                };
+                            });
+
+                            descRow.getCell(2).alignment = { horizontal: 'left' };
+                            descRow.getCell(2).font = { color: { argb: 'FF666666' } };
+
+                            currentRow++;
+                        }
+                    }
+                });
+
+                // Tính thuế 8%
+                const tax = Math.round(subtotal * 0.08);
+                const grandTotal = subtotal + tax;
+
+                // Thêm dòng tổng cộng
+                const subtotalRow = worksheet.addRow(['Cộng tiền hàng', '', '', '', '', 'Cộng tiền hàng', '', '', subtotal]);
+                worksheet.mergeCells(`A${currentRow}:H${currentRow}`);
+
+                // Style cho dòng tổng
+                subtotalRow.eachCell((cell) => {
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                    if (cell.col === 9) {
+                        cell.numFmt = '#,##0';
+                    }
+                });
+                subtotalRow.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
+                subtotalRow.getCell(6).font = { bold: true };
+                subtotalRow.getCell(9).alignment = { horizontal: 'right' };
+
+                currentRow++;
+
+                // Thêm dòng thuế
+                const taxRow = worksheet.addRow(['Thuế GTGT (8%)', '', '', '', '', '', '', '', tax]);
+                worksheet.mergeCells(`A${currentRow}:H${currentRow}`);
+
+                // Style cho dòng thuế
+                taxRow.eachCell((cell) => {
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                    if (cell.col === 9) {
+                        cell.numFmt = '#,##0';
+                    }
+                });
+                taxRow.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
+                taxRow.getCell(6).font = { bold: true };
+                taxRow.getCell(9).alignment = { horizontal: 'right' };
+
+                currentRow++;
+
+                // Thêm dòng tổng tiền thanh toán
+                const grandTotalRow = worksheet.addRow(['Tổng tiền thanh toán', '', '', '', '', '', '', '', grandTotal]);
+                worksheet.mergeCells(`A${currentRow}:H${currentRow}`);
+
+                // Style cho dòng tổng tiền
+                grandTotalRow.eachCell((cell) => {
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                    if (cell.col === 9) {
+                        cell.numFmt = '#,##0';
+                    }
+                });
+                grandTotalRow.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
+                grandTotalRow.getCell(6).font = { bold: true };
+                grandTotalRow.getCell(9).alignment = { horizontal: 'right' };
+
+                currentRow++;
+
+                // Thêm dòng tạm ứng
+                const advanceRow = worksheet.addRow(['Tạm ứng', '', '', '', '', '', '', '', parseFloat(order['Số tiền đã thu'] || 0)]);
+                worksheet.mergeCells(`A${currentRow}:H${currentRow}`);
+
+                // Style cho dòng tạm ứng
+                advanceRow.eachCell((cell) => {
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                    if (cell.col === 9) {
+                        cell.numFmt = '#,##0';
+                    }
+                });
+                advanceRow.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
+                advanceRow.getCell(6).font = { bold: true };
+                advanceRow.getCell(9).alignment = { horizontal: 'right' };
+
+                currentRow++;
+
+                // Thêm dòng còn lại
+                const remainingRow = worksheet.addRow(['Còn lại', '', '', '', '', '', '', '', parseFloat(order['Số tiền còn phải thu'] || 0)]);
+                worksheet.mergeCells(`A${currentRow}:H${currentRow}`);
+
+                // Style cho dòng còn lại
+                remainingRow.eachCell((cell) => {
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                    if (cell.col === 9) {
+                        cell.numFmt = '#,##0';
+                    }
+                });
+                remainingRow.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
+                remainingRow.getCell(6).font = { bold: true };
+                remainingRow.getCell(9).alignment = { horizontal: 'right' };
+
+                currentRow += 2;
+
+                // Thêm số tiền bằng chữ
+                worksheet.mergeCells(`A${currentRow}:I${currentRow}`);
+                const wordCell = worksheet.getCell(`A${currentRow}`);
+                wordCell.value = 'Số tiền bằng chữ: '+ totalInWords;
+                wordCell.font = { bold: true };
+
+                currentRow += 3;
+
+                // Thêm phần chữ ký
+                const buyerCell = worksheet.getCell(`C${currentRow}`);
+                buyerCell.value = 'BÊN MUA';
+                buyerCell.font = { bold: true };
+                buyerCell.alignment = { horizontal: 'center' };
+
+                const sellerCell = worksheet.getCell(`G${currentRow}`);
+                sellerCell.value = 'BÊN BÁN';
+                sellerCell.font = { bold: true };
+                sellerCell.alignment = { horizontal: 'center' };
+
+                currentRow++;
+
+                worksheet.getCell(`C${currentRow}`).value = '(Ký, họ tên)';
+                worksheet.getCell(`C${currentRow}`).alignment = { horizontal: 'center' };
+                worksheet.getCell(`C${currentRow}`).font = { italic: true };
+
+                worksheet.getCell(`G${currentRow}`).value = '(Ký, họ tên)';
+                worksheet.getCell(`G${currentRow}`).alignment = { horizontal: 'center' };
+                worksheet.getCell(`G${currentRow}`).font = { italic: true };
+
+                // Tạo blob và tải xuống
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                saveAs(blob, `Phieu_xuat_kho_${orderNumber}.xlsx`);
+
+            } catch (error) {
+                console.error('Error exporting to Excel:', error);
+                alert('Có lỗi khi xuất file Excel: ' + error.message);
             } finally {
                 document.getElementById('loading').style.display = 'none';
             }
