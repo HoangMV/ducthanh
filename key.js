@@ -1,3 +1,3 @@
-const appId = 'd4e7fd95-42b6-4a41-ab3e-eac72731fe07';
-const accessKey = 'V2-3dYqz-xwhyz-B41Kw-E9nvf-hATE7-YNdCe-9JYUY-6A7q3';
+const appId = '8f6922a6-713e-47ae-8eb1-0df1645b64a2';
+const accessKey = 'V2-I8mfy-30hX2-P2bKJ-uAxbH-L5S89-v6U6M-iZAzo-14Oa0';
 const region = 'www';
