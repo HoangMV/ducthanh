@@ -298,10 +298,9 @@
                                 <select id="nguonKhachHang"
                                     class="custom-input w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm bg-white appearance-none">
                                     <option value="">-- Chọn nguồn --</option>
-                                    <option value="Facebook">Facebook</option>
-                                    <option value="Website">Website</option>
-                                    <option value="Giới thiệu">Giới thiệu</option>
-                                    <option value="Khác">Khác</option>
+                                    <option value="Khách mới từ QC">Khách mới từ QC</option>
+                                    <option value="Khách cũ quay lại">Khách cũ quay lại</option>
+                                    <option value="Khách tự tìm">Khách tự tìm</option>
                                 </select>
                                 <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                     <i class="fas fa-chevron-down text-gray-400"></i>
@@ -1380,7 +1379,6 @@
                     };
 
                     // Gửi request đơn hàng
-                    // Gửi request đơn hàng
                     try {
                         console.log('Sending order data:', JSON.stringify(donHangPayload, null, 2));
 
@@ -1482,7 +1480,32 @@
                 } catch (error) {
                     this.hideLoading();
                     console.error('Lỗi khi lưu dữ liệu:', error);
-                    this.showAlert('error', 'Lỗi!', error.message || 'Có lỗi xảy ra khi lưu thông tin! Vui lòng thử lại.');
+
+                    // Xử lý lỗi từ API một cách cụ thể
+                    if (error.response && error.response.data && error.response.data.detail) {
+                        const errorDetail = error.response.data.detail;
+
+                        // Kiểm tra lỗi mã đơn hàng
+                        if (errorDetail.includes("Invalid value for column Mã đơn hàng")) {
+                            // Đánh dấu trường mã đơn hàng
+                            const maDonHangInput = document.getElementById('maDonHang');
+                            maDonHangInput.classList.add('border-red-500');
+
+                            // Hiển thị thông báo lỗi rõ ràng
+                            this.showAlert('error', 'Lỗi mã đơn hàng!',
+                                'Mã đơn hàng không hợp lệ. Vui lòng sử dụng định dạng khác (ví dụ: chỉ dùng số) hoặc mã đơn hàng đã tồn tại.');
+
+                            // Tự động focus vào trường lỗi
+                            maDonHangInput.focus();
+                            return;
+                        }
+
+                        // Các loại lỗi khác từ API
+                        this.showAlert('error', 'Lỗi từ hệ thống!', errorDetail);
+                    } else {
+                        // Lỗi chung
+                        this.showAlert('error', 'Lỗi!', error.message || 'Có lỗi xảy ra khi lưu thông tin! Vui lòng thử lại.');
+                    }
                 }
             }
 
