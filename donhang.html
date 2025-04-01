@@ -1312,7 +1312,7 @@
                         'Phụ phí điều chỉnh': parseFloat(row.dataset.phuPhiDieuChinh) || 0,
                         'Đơn giá điều chỉnh': parseFloat(row.dataset.donGiaDieuChinh) || 0,
                         'Thành tiền sau điều chỉnh': parseFloat(row.dataset.thanhTienSauDieuChinh) || 0,
-                        'Thuế suất': parseFloat(row.dataset.thueSuat) || 0,
+                        'Thuế suất': parseFloat(row.dataset.thueSuat)/100 || 0,
                         'Tiền thuế': parseFloat(row.dataset.tienThue) || 0,
                         'Phí suất quản lý điều chỉnh': parseFloat(row.dataset.phiQuanLy) || 0,
                         'Tổng giá trị': parseFloat(row.dataset.tongGiaTri) || 0,
