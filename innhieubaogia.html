@@ -187,6 +187,7 @@
         <!-- Nội dung báo giá sẽ được thêm vào đây -->
     </div>
 
+    <script src="https://hoangmv.github.io/ducthanh/key.js"></script>
     <script>
         let appData = {
             orders: [],
@@ -194,10 +195,6 @@
             products: {},   // Lưu trữ sản phẩm theo ID đơn hàng
             selectedOrders: new Set()
         };
-        // Constants for AppSheet connection
-        const appId = 'd4e7fd95-42b6-4a41-ab3e-eac72731fe07';
-        const accessKey = 'V2-3dYqz-xwhyz-B41Kw-E9nvf-hATE7-YNdCe-9JYUY-6A7q3';
-        const region = 'www';
 
         function showLoading() {
             document.getElementById('loadingOverlay').style.display = 'flex';
