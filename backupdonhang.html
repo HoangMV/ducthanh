@@ -313,17 +313,6 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Người phụ trách</label>
-                        <div class="flex gap-2">
-                            <div class="relative flex-1">
-                                <select id="nguoiPhuTrach" class="choices-select">
-                                    <option value="">-- Chọn nhân viên --</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Ngày đặt hàng <span
                                 class="text-red-500">*</span></label>
                         <div class="relative">
@@ -705,31 +694,16 @@
     <!-- Thêm thư viện SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://hoangmv.github.io/ducthanh/key.js"></script>
-
     <script>
         // Class chính quản lý đơn hàng
         class OrderManager {
-            // Add this function to the OrderManager class
-            getUrlParameter(name) {
-                name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-                const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
-                const results = regex.exec(location.search);
-                return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
-            }
-
-            // Add this property to the constructor
-            // In the OrderManager class, add a new property to store employee list
             constructor(appId, accessKey) {
                 this.appId = appId;
                 this.accessKey = accessKey;
                 this.donHangData = null;
                 this.hangHoaList = [];
                 this.khachHangList = [];
-                this.nhanVienList = []; // Add this line
                 this.currentEditingRow = null;
-
-                // Get employee name from URL
-                this.employeeName = this.getUrlParameter('nhanvien') || 'System';
 
                 // Thêm modals vào DOM
                 document.body.insertAdjacentHTML('beforeend', this.importModalHTML);
@@ -737,7 +711,6 @@
                 this.init();
             }
 
-            // Add this to the init() method
             async init() {
                 try {
                     this.showLoading('Đang khởi tạo...');
@@ -748,27 +721,12 @@
                         throw new Error('Không thể kết nối đến AppSheet API');
                     }
 
-                    // Display employee name if present
-                    if (this.employeeName && this.employeeName !== 'System') {
-                        // You could add a small element in the header to show who's logged in
-                        const headerDiv = document.querySelector('header div.flex.items-center.space-x-4');
-                        if (headerDiv) {
-                            const userInfoElement = document.createElement('div');
-                            userInfoElement.className = 'ml-auto text-sm text-gray-600';
-                            userInfoElement.innerHTML = `<i class="fas fa-user mr-1"></i> ${this.employeeName}`;
-                            headerDiv.appendChild(userInfoElement);
-                        }
-                    }
-
                     // Thiết lập các giá trị ban đầu
                     this.setupEventListeners();
                     this.generateNewOrderCode();
                     this.setDefaultDate();
                     this.setDefaultDate1();
-                    await Promise.all([
-                        this.loadKhachHangList(),
-                        this.loadNhanVienList() // Add this line
-                    ]);
+                    await this.loadKhachHangList();
                     this.updateProgressSteps(1);
 
                     this.hideLoading();
@@ -1096,73 +1054,6 @@
                 }
             }
 
-            // Add a method to load employee list
-            async loadNhanVienList() {
-                try {
-                    const response = await axios({
-                        method: 'POST',
-                        url: `https://www.appsheet.com/api/v2/apps/${this.appId}/tables/Nhân viên/Action`,
-                        headers: {
-                            'ApplicationAccessKey': this.accessKey,
-                            'Content-Type': 'application/json'
-                        },
-                        data: {
-                            "Action": "Find",
-                            "Properties": {
-                                "Locale": "vi-VN",
-                                "Timezone": "Asia/Ho_Chi_Minh",
-                                "Selector": "Filter(Nhân viên, true)"
-                            }
-                        }
-                    });
-
-                    if (response.data && response.data.Rows) {
-                        this.nhanVienList = response.data.Rows;
-                    } else if (Array.isArray(response.data)) {
-                        this.nhanVienList = response.data;
-                    } else {
-                        console.error('Cấu trúc dữ liệu nhân viên không đúng:', response.data);
-                        this.nhanVienList = [];
-                    }
-
-                    // Khởi tạo select nhân viên
-                    const nhanVienSelect = document.getElementById('nguoiPhuTrach');
-                    nhanVienSelect.innerHTML = '<option value="">-- Chọn nhân viên --</option>';
-
-                    this.nhanVienList.forEach(nhanVien => {
-                        const option = document.createElement('option');
-                        option.value = nhanVien['ID nhân viên'] || nhanVien.ID;
-                        option.textContent = nhanVien['Tên nhân viên'] || nhanVien.Ten;
-                        if (option.textContent) {
-                            // Add mã nhân viên if available
-                            if (nhanVien['Mã nhân viên']) {
-                                option.textContent = `${nhanVien['Mã nhân viên']} - ${option.textContent}`;
-                            }
-                            nhanVienSelect.appendChild(option);
-                        }
-                    });
-
-                    // Khởi tạo Choices
-                    if (this.nhanVienChoices) {
-                        this.nhanVienChoices.destroy();
-                    }
-
-                    this.nhanVienChoices = new Choices('#nguoiPhuTrach', {
-                        searchEnabled: true,
-                        searchPlaceholderValue: 'Nhập tên để tìm...',
-                        noResultsText: 'Không tìm thấy nhân viên',
-                        itemSelectText: 'Chọn',
-                        removeItemButton: true,
-                        searchFields: ['label'],
-                        position: 'bottom'
-                    });
-
-                } catch (error) {
-                    console.error('Lỗi khi tải danh sách nhân viên:', error);
-                    this.showAlert('error', 'Lỗi kết nối', 'Không thể tải danh sách nhân viên. Vui lòng thử lại sau.');
-                }
-            }
-
             // Xác nhận reset form
             confirmResetForm() {
                 Swal.fire({
@@ -1421,13 +1312,13 @@
                         'Phụ phí điều chỉnh': parseFloat(row.dataset.phuPhiDieuChinh) || 0,
                         'Đơn giá điều chỉnh': parseFloat(row.dataset.donGiaDieuChinh) || 0,
                         'Thành tiền sau điều chỉnh': parseFloat(row.dataset.thanhTienSauDieuChinh) || 0,
-                        'Thuế suất': parseFloat(row.dataset.thueSuat) / 100 || 0,
+                        'Thuế suất': parseFloat(row.dataset.thueSuat)/100 || 0,
                         'Tiền thuế': parseFloat(row.dataset.tienThue) || 0,
                         'Phí suất quản lý điều chỉnh': parseFloat(row.dataset.phiQuanLy) || 0,
                         'Tổng giá trị': parseFloat(row.dataset.tongGiaTri) || 0,
                         'Tiền hoàn trả cho khách': parseInt(row.dataset.tienHoanTra.replace(/\./g, '')) || 0, // Xử lý chuỗi có dấu phân cách hàng nghìn
                         'Ghi chú': row.dataset.ghiChu || '',
-                        'Người tạo': this.employeeName, // Use the employee name from URL
+                        'Người tạo': 'System',
                         'Ngày tạo': this.formatDate(new Date())
                     };
 
@@ -1449,7 +1340,6 @@
                     const nguonKhachHangValue = nguonKhachHangSelect.value === 'Khác'
                         ? nguonKhachHangKhac.value
                         : nguonKhachHangSelect.value;
-                    const idNhanVien = document.getElementById('nguoiPhuTrach').value;
 
                     if (!tenDonHang || !khachHang || !ngayDatHang) {
                         throw new Error('Vui lòng điền đầy đủ thông tin bắt buộc: Tên đơn hàng, Khách hàng, Ngày đặt hàng');
@@ -1469,15 +1359,13 @@
                         'Mã đơn hàng': document.getElementById('maDonHang').value,
                         'Tên đơn hàng': tenDonHang,
                         'ID khách hàng': khachHang,
-                        'ID nhân viên': idNhanVien, // This is the employee ID field
                         'Nguồn khách hàng': nguonKhachHangValue,
                         'Ngày đặt hàng': ngayDatHang,
                         'Ngày hạch toán': document.getElementById('ngayHachToan').value || '',
                         'Giá sản xuất tạm tính': this.parseCurrency(document.getElementById('giaSanXuatTamTinh').value) || 0,
                         'Tổng tiền hàng': this.parseCurrency(document.getElementById('tongTienHang').value) || 0,
                         'Tổng giá trị đơn': this.parseCurrency(document.getElementById('tongGiaTriDon').value) || 0,
-                        'Ghi chú': document.getElementById('ghiChu').value || '',
-                        'Người tạo': this.employeeName
+                        'Ghi chú': document.getElementById('ghiChu').value || ''
                     };
 
                     // Tạo payload cho đơn hàng
@@ -1620,7 +1508,6 @@
                     }
                 }
             }
-
 
             // Mở modal chi tiết hàng hóa
             openHangHoaDetail(button) {
@@ -1777,7 +1664,7 @@
                         'SĐT': document.getElementById('soDienThoai').value,
                         'Email': document.getElementById('email').value,
                         'Ghi chú': document.getElementById('ghiChuKhachHang').value,
-                        'Người tạo': this.employeeName, // Use the employee name from URL
+                        'Người tạo': 'System',
                         'Ngày tạo': this.formatDate(new Date())
                     };
 
