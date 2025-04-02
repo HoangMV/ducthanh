@@ -728,7 +728,7 @@
                 this.currentEditingRow = null;
 
                 // Get employee name from URL
-                this.employeeName = this.getUrlParameter('nhanvien') || 'System';
+                this.employeeName = this.getUrlParameter('nhanvien');
 
                 // Thêm modals vào DOM
                 document.body.insertAdjacentHTML('beforeend', this.importModalHTML);
@@ -748,7 +748,7 @@
                     }
 
                     // Display employee name if present
-                    if (this.employeeName && this.employeeName !== 'System') {
+                    if (this.employeeName) {
                         // You could add a small element in the header to show who's logged in
                         const headerDiv = document.querySelector('header div.flex.items-center.space-x-4');
                         if (headerDiv) {
@@ -784,7 +784,7 @@
 
             // Add this new method to set the employee from URL
             setEmployeeFromUrl() {
-                if (this.employeeName && this.employeeName !== 'System' && this.nhanVienChoices) {
+                if (this.employeeName && this.nhanVienChoices) {
                     // Find the employee ID that matches the name from URL
                     const foundEmployee = this.nhanVienList.find(nv =>
                         nv['Tên nhân viên'] === this.employeeName ||
