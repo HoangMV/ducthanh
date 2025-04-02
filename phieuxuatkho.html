@@ -152,7 +152,7 @@
 
         .product-name {
             text-align: left;
-            padding-left: 10px;
+            padding-left: 6px;
         }
 
         p {
@@ -178,7 +178,6 @@
 
         .product-info {
             text-align: left;
-            padding-left: 10px;
         }
 
         .product-info strong {
@@ -274,7 +273,7 @@
         <button id="printButton" onclick="window.print()">
             <i class="fas fa-print"></i> In xác nhận
         </button>
-    
+
         <button id="excelButton" onclick="exportToExcelWithExcelJS()">
             <i class="fas fa-file-excel"></i> Xuất Excel
         </button>
@@ -366,7 +365,8 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
     <script src="https://hoangmv.github.io/ducthanh/key.js"></script>
     <script>
-        
+
+
         // Function to get URL parameters
         function getUrlParameter(name) {
             name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
@@ -456,8 +456,9 @@
                     },
                     body: JSON.stringify({
                         Action: 'Find',
-                        Properties: {},
-                        Selector: `Filter([Đơn hàng], [ID đơn hàng] = "${orderId}")`
+                        Properties: {
+                            Selector: `Filter(Đơn hàng, [ID đơn hàng] = "${orderId}")`
+                        },
                     })
                 });
 
@@ -500,8 +501,9 @@
                     },
                     body: JSON.stringify({
                         Action: 'Find',
-                        Properties: {},
-                        Selector: `Filter([Khách hàng], [ID khách hàng] = "${customerId}")`
+                        Properties: {
+                            Selector: `Filter(Khách hàng, [ID khách hàng] = "${customerId}")`
+                        },
                     })
                 });
 
@@ -591,16 +593,16 @@
                 const row = document.createElement('tr');
                 row.innerHTML = `
             <td>${index + 1}</td>
-            <td class="product-name">
+            <td>
                 <div class="product-info">
                     <strong>${item['Tên hàng hoá'] || ''}</strong>
                     <span class="product-description">${item['Mô tả'] || ''}</span>
                 </div>
             </td>
             <td>${item['Đơn vị tính'] || 'Cái'}</td>
-            <td>${quantity}</td>
-            <td>${formatCurrency(unitPrice)}</td>
-            <td>${formatCurrency(total)}</td>
+            <td style="text-align: right;">${formatCurrency(quantity)}</td>
+            <td style="text-align: right;">${formatCurrency(unitPrice)}</td>
+            <td style="text-align: right;">${formatCurrency(total)}</td>
         `;
 
                 tableBody.appendChild(row);
@@ -615,23 +617,23 @@
                 tableFooter.innerHTML = `
                     <tr>
                         <td colspan="5" style="text-align: center; font-weight: bold;">Cộng tiền hàng</td>
-                        <td>${formatCurrency(subtotal)}</td>
+                        <td style="text-align: right;">${formatCurrency(subtotal)}</td>
                     </tr>
                     <tr>
                         <td colspan="5" style="text-align: center; font-weight: bold;">Thuế GTGT (8%)</td>
-                        <td>${formatCurrency(tax)}</td>
+                        <td style="text-align: right;">${formatCurrency(tax)}</td>
                     </tr>
                     <tr>
                         <td colspan="5" style="text-align: center; font-weight: bold;">Tổng tiền thanh toán</td>
-                        <td>${formatCurrency(grandTotal)}</td>
+                        <td style="text-align: right;">${formatCurrency(grandTotal)}</td>
                     </tr>
                     <tr>
                         <td colspan="5" style="text-align: center; font-weight: bold;">Tạm ứng</td>
-                        <td>${formatCurrency(order['Số tiền đã thu'] || 0)}</td>
+                        <td style="text-align: right;">${formatCurrency(order['Số tiền đã thu'] || 0)}</td>
                     </tr>
                     <tr class="total-row">
                         <td colspan="5" style="text-align: center; font-weight: bold;">Còn lại</td>
-                        <td>${formatCurrency(order['Số tiền còn phải thu'] || 0)}</td>
+                        <td style="text-align: right;">${formatCurrency(order['Số tiền còn phải thu'] || 0)}</td>
                     </tr>
                     
                 `;
@@ -804,7 +806,7 @@
             }
         }
 
-   
+
         // Thêm khai báo biến ở phạm vi toàn cục (bên ngoài các hàm)
         let order;
 
@@ -1167,7 +1169,7 @@
                 // Thêm số tiền bằng chữ
                 worksheet.mergeCells(`A${currentRow}:I${currentRow}`);
                 const wordCell = worksheet.getCell(`A${currentRow}`);
-                wordCell.value = 'Số tiền bằng chữ: '+ totalInWords;
+                wordCell.value = 'Số tiền bằng chữ: ' + totalInWords;
                 wordCell.font = { bold: true };
 
                 currentRow += 3;

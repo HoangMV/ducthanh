@@ -155,7 +155,6 @@
 
         .product-info {
             text-align: left;
-            padding-left: 10px;
         }
 
         .product-info strong {
@@ -434,8 +433,8 @@
                     },
                     body: JSON.stringify({
                         Action: 'Find',
-                        Properties: {},
-                        Selector: `Filter([Đơn hàng], [ID đơn hàng] = "${orderId}")`
+                        Properties: {  Selector: `Filter(Đơn hàng, [ID đơn hàng] = "${orderId}")`},
+                      
                     })
                 });
 
@@ -478,8 +477,8 @@
                     },
                     body: JSON.stringify({
                         Action: 'Find',
-                        Properties: {},
-                        Selector: `Filter([Khách hàng], [ID khách hàng] = "${customerId}")`
+                        Properties: {Selector: `Filter(Khách hàng, [ID khách hàng] = "${customerId}")`},
+                
                     })
                 });
 
@@ -518,8 +517,8 @@
                     },
                     body: JSON.stringify({
                         Action: 'Find',
-                        Properties: {},
-                        Selector: `Filter([Hàng hoá], [ID đơn hàng] = "${orderId}")`
+                        Properties: {Selector: `Filter(Hàng hoá, [ID đơn hàng] = "${orderId}")`},
+                        
                     })
                 });
 
@@ -569,16 +568,16 @@
                 const row = document.createElement('tr');
                 row.innerHTML = `
             <td>${index + 1}</td>
-            <td class="product-name">
+            <td>
                 <div class="product-info">
                     <strong>${item['Tên hàng hoá'] || ''}</strong>
                     <span class="product-description">${item['Mô tả'] || ''}</span>
                 </div>
             </td>
             <td>${item['Đơn vị tính'] || 'Cái'}</td>
-            <td>${quantity}</td>
-            <td>${formatCurrency(unitPrice)}</td>
-            <td>${formatCurrency(total)}</td>
+            <td style="text-align: right;">${formatCurrency(quantity)}</td>
+            <td style="text-align: right;">${formatCurrency(unitPrice)}</td>
+            <td style="text-align: right;">${formatCurrency(total)}</td>
         `;
 
                 tableBody.appendChild(row);
@@ -593,15 +592,15 @@
                 tableFooter.innerHTML = `
                     <tr>
                         <td colspan="5" style="text-align: center; font-weight: bold;">Cộng tiền hàng</td>
-                        <td>${formatCurrency(subtotal)}</td>
+                        <td style="text-align: right;">${formatCurrency(subtotal)}</td>
                     </tr>
                     <tr>
                         <td colspan="5" style="text-align: center; font-weight: bold;">Thuế GTGT (8%)</td>
-                        <td>${formatCurrency(tax)}</td>
+                        <td style="text-align: right;">${formatCurrency(tax)}</td>
                     </tr>
                     <tr class="total-row">
                         <td colspan="5" style="text-align: center; font-weight: bold;">Cộng</td>
-                        <td>${formatCurrency(grandTotal)}</td>
+                        <td style="text-align: right;">${formatCurrency(grandTotal)}</td>
                     </tr>
                 `;
             }

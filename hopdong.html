@@ -141,7 +141,6 @@
 
         .product-info {
             text-align: left;
-            padding-left: 10px;
         }
 
         .product-info strong {
@@ -686,14 +685,14 @@
                 const row = document.createElement('tr');
                 row.innerHTML = `
             <td  class="center">${index + 1}</td>
-            <td class="product-name">
+            <td>
                 <div class="product-info">
                     <strong>${item['Tên hàng hoá'] || ''}</strong>
                     <span class="product-description">${item['Mô tả'] || ''}</span>
                 </div>
             </td>
-            <td  class="center">${item['Đơn vị tính'] || 'Cái'}</td>
-            <td  class="center">${quantity}</td>
+            <td class="center">${item['Đơn vị tính'] || 'Cái'}</td>
+            <td style="text-align: right;">${formatCurrency(quantity)}</td>
             <td style="text-align: right;">${formatCurrency(unitPrice)}</td>
             <td style="text-align: right;">${formatCurrency(total)}</td>
         `;
