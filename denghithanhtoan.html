@@ -243,9 +243,9 @@
 
         <div class="payment-info">
             <div>CÔNG TY TNHH SẢN XUẤT VÀ DỊCH VỤ ĐỨC THÀNH đề nghị Quý Công ty thanh toán số tiền theo bản thanh toán.
+                <strong>Tổng giá trị: <span id="total-amount">0</span> vnđ</strong> (Bằng chữ: <span
+                    id="amount-in-words">Không đồng</span>)
             </div>
-            <div><strong>Tổng giá trị: <span id="total-amount">0</span> vnđ</strong></div>
-            <div>(Bằng chữ: <span id="amount-in-words">Không đồng</span>)</div>
             <br>
             <div>Tài khoản nhận tiền:</div>
             <div class="company-info">
@@ -263,8 +263,14 @@
         </div>
     </div>
 
+    <!-- Thêm vào phần head, sau các script hiện có -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-style@0.8.13/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
+
     <script src="https://hoangmv.github.io/ducthanh/key.js"></script>
     <script>
+
+
         // Function to get URL parameters
         function getUrlParameter(name) {
             name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
@@ -351,8 +357,9 @@
                     },
                     body: JSON.stringify({
                         Action: 'Find',
-                        Properties: {},
-                        Selector: `Filter([Đơn hàng], [ID đơn hàng] = "${orderId}")`
+                        Properties: {
+                            Selector: `Filter(Đơn hàng, [ID đơn hàng] = "${orderId}")`
+                        },
                     })
                 });
 
@@ -395,8 +402,9 @@
                     },
                     body: JSON.stringify({
                         Action: 'Find',
-                        Properties: {},
-                        Selector: `Filter([Khách hàng], [ID khách hàng] = "${customerId}")`
+                        Properties: {
+                            Selector: `Filter(Khách hàng, [ID khách hàng] = "${customerId}")`
+                        },
                     })
                 });
 
@@ -484,6 +492,16 @@
         // Hàm xuất file Word
         async function exportToWordTemplate() {
             try {
+                // Hiển thị loading
+                document.getElementById('loading').style.display = 'block';
+
+                // Lấy order ID từ tham số URL để dùng trong tên file
+                const orderId = getUrlParameter('id');
+
+                // Lấy đơn hàng để lấy mã đơn hàng (orderNumber)
+                const order = await fetchOrderById(orderId);
+                const orderNumber = order['Mã đơn hàng'] || orderId;
+
                 // Lấy dữ liệu hiện tại trên form
                 const customerName = document.getElementById('customer-name').textContent;
                 const amount = document.getElementById('amount').textContent;
@@ -506,8 +524,8 @@
                     year: year
                 };
 
-                // Load template từ server (sử dụng một file template mẫu, cần phải tạo trước)
-                const response = await fetch('https://example.com/templates/advance_request_template.docx');
+                // Load template từ server
+                const response = await fetch('https://hoangmv.github.io/templates/denghithanhtoan_template.docx');
                 if (!response.ok) {
                     throw new Error('Không thể tải template Word');
                 }
@@ -530,21 +548,40 @@
                     mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 });
 
-                const fileName = `De_nghi_thanh_toan_${day}${month}${year}.docx`;
+                const fileName = `De_nghi_thanh_toan_${orderNumber}.docx`;
                 saveAs(blob, fileName);
 
             } catch (error) {
                 console.error('Error exporting to Word:', error);
-                alert('Có lỗi khi xuất file Word. Vui lòng thử lại sau.');
+                document.getElementById('error-message').textContent = 'Lỗi khi xuất file Word: ' + error.message;
+                document.getElementById('error-message').style.display = 'block';
+            } finally {
+                document.getElementById('loading').style.display = 'none';
             }
         }
 
-        // Hàm xuất file Excel
+        // Thêm hàm applyTimesNewRoman
+        function applyTimesNewRoman(cell, isBold = false, fontSize = 12) {
+            cell.font = {
+                name: 'Times New Roman',
+                bold: isBold,
+                size: fontSize
+            };
+            cell.alignment = {
+                vertical: 'middle',
+                wrapText: true
+            };
+        }
+
         async function exportToExcelTemplate() {
             try {
                 document.getElementById('loading').style.display = 'block';
 
-                // Lấy dữ liệu hiện tại trên form
+                // Lấy dữ liệu
+                const orderId = getUrlParameter('id');
+                const order = await fetchOrderById(orderId);
+                const orderNumber = order['Mã đơn hàng'] || orderId;
+
                 const customerName = document.getElementById('customer-name').textContent;
                 const amount = document.getElementById('amount').textContent.replace(/[,.]/g, '');
                 const amountInWords = document.getElementById('amount-in-words').textContent;
@@ -554,51 +591,144 @@
                 const month = currentDate.getMonth() + 1;
                 const year = currentDate.getFullYear();
 
-                // Tạo workbook mới
-                const workbook = XLSX.utils.book_new();
+                // Tạo workbook và worksheet mới
+                const workbook = new ExcelJS.Workbook();
+                workbook.creator = 'Đức Thành';
+                workbook.lastModifiedBy = 'Đức Thành';
 
-                // Tạo worksheet
-                const wsData = [
-                    ['CÔNG TY TNHH SẢN XUẤT VÀ DỊCH VỤ ĐỨC THÀNH', '', 'CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM'],
-                    ['', '', 'Độc lập - Tự do - Hạnh phúc'],
-                    ['', '', ''],
-                    ['ĐỀ NGHỊ THANH TOÁN', '', ''],
-                    ['', '', ''],
-                    ['Kính gửi:', customerName, ''],
-                    ['', '', ''],
-                    ['Xin vui lòng thanh toán vào thông tin tài khoản bên dưới theo nội dung sau:', '', ''],
-                    ['', '', ''],
-                    ['STT', 'Nội dung thanh toán', 'Số tiền (VNĐ)'],
-                    ['1', 'Tạm ứng 50% tiền in ấn sản phẩm', amount],
-                    ['', '', ''],
-                    ['CÔNG TY TNHH SẢN XUẤT VÀ DỊCH VỤ ĐỨC THÀNH đề nghị Quý Công ty thanh toán số tiền theo bản thanh toán.', '', ''],
-                    ['Tổng giá trị:', amount, 'vnđ'],
-                    ['(Bằng chữ:', amountInWords + ')', ''],
-                    ['', '', ''],
-                    ['Tài khoản nhận tiền:', '', ''],
-                    ['- Tên thụ hưởng: Công Ty TNHH Sản Xuất Và Dịch Vụ Đức Thành', '', ''],
-                    ['- Số tài khoản: 156939258 tại ngân hàng VP Bank - Chi nhánh Thăng Long.', '', ''],
-                    ['', '', ''],
-                    ['Trân trọng cảm ơn!', '', ''],
-                    ['', '', ''],
-                    ['', '', `Hà Nội, Ngày ${day} tháng ${month} năm ${year}`],
-                    ['', '', 'ĐẠI DIỆN CÔNG TY']
+                const worksheet = workbook.addWorksheet('Đề nghị thanh toán');
+
+                // Đặt chiều rộng cột
+                worksheet.columns = [
+                    { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 },
+                    { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 }
                 ];
 
-                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                // Thêm dữ liệu và định dạng
+                // Header
+                worksheet.mergeCells('A1:C1');
+                worksheet.getCell('A1').value = 'CÔNG TY TNHH SẢN XUẤT';
+                applyTimesNewRoman(worksheet.getCell('A1'), true, 12);
 
-                // Thêm worksheet vào workbook
-                XLSX.utils.book_append_sheet(workbook, ws, "Đề nghị thanh toán");
+                worksheet.mergeCells('E1:H1');
+                worksheet.getCell('E1').value = 'CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM';
+                applyTimesNewRoman(worksheet.getCell('E1'), true, 12);
+                worksheet.getCell('E1').alignment = { horizontal: 'center' };
 
-                // Xuất file Excel
-                const excelOutput = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-                const blob = new Blob([excelOutput], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                const fileName = `De_nghi_thanh_toan_${day}${month}${year}.xlsx`;
+                worksheet.mergeCells('A2:C2');
+                worksheet.getCell('A2').value = 'VÀ DỊCH VỤ ĐỨC THÀNH';
+                applyTimesNewRoman(worksheet.getCell('A2'), true, 12);
+
+                worksheet.mergeCells('E2:H2');
+                worksheet.getCell('E2').value = 'Độc lập - Tự do - Hạnh phúc';
+                applyTimesNewRoman(worksheet.getCell('E2'), true, 12);
+                worksheet.getCell('E2').alignment = { horizontal: 'center' };
+
+                // Tiêu đề
+                worksheet.mergeCells('C4:F4');
+                worksheet.getCell('C4').value = 'ĐỀ NGHỊ THANH TOÁN';
+                applyTimesNewRoman(worksheet.getCell('C4'), true, 16);
+                worksheet.getCell('C4').alignment = { horizontal: 'center' };
+
+                // Kính gửi
+                worksheet.getCell('A5').value = 'Kính gửi:';
+                applyTimesNewRoman(worksheet.getCell('A5'), true, 12);
+
+                worksheet.mergeCells('B5:H5');
+                worksheet.getCell('B5').value = customerName;
+                applyTimesNewRoman(worksheet.getCell('B5'), false, 12);
+
+                // Nội dung
+                worksheet.mergeCells('A6:H6');
+                worksheet.getCell('A6').value = 'Công Ty TNHH Sản Xuất Và Dịch Vụ Đức Thành xin gửi đến Quý Công ty lời chào trân trọng.';
+                applyTimesNewRoman(worksheet.getCell('A6'), false, 12);
+
+                worksheet.mergeCells('A7:H7');
+                worksheet.getCell('A7').value = 'Căn cứ Hợp đồng/Đơn hàng số: ... ký kết ngày ... giữa các bên, Công Ty TNHH Sản Xuất Và Dịch Vụ';
+                applyTimesNewRoman(worksheet.getCell('A7'), false, 12);
+
+                worksheet.mergeCells('A8:H8');
+                worksheet.getCell('A8').value = 'Đức Thành xin thông báo và đề nghị Công ty ... thanh toán tạm ứng theo quy định tại Hợp đồng/Đơn hàng';
+                applyTimesNewRoman(worksheet.getCell('A8'), false, 12);
+
+                worksheet.mergeCells('A9:H9');
+                worksheet.getCell('A9').value = 'cụ thể như sau:';
+                applyTimesNewRoman(worksheet.getCell('A9'), false, 12);
+
+                // Số tiền
+                worksheet.getCell('A10').value = '1. Số tiền tạm ứng là:';
+                applyTimesNewRoman(worksheet.getCell('A10'), false, 12);
+
+                worksheet.getCell('B10').value = formatCurrency(parseFloat(amount));
+                applyTimesNewRoman(worksheet.getCell('B10'), true, 12);
+
+                worksheet.getCell('C10').value = 'VNĐ';
+                applyTimesNewRoman(worksheet.getCell('C10'), true, 12);
+
+                worksheet.mergeCells('D10:H10');
+                worksheet.getCell('D10').value = ',tương ứng 50% giá trị Hợp đồng/Đơn hàng còn lại.';
+                applyTimesNewRoman(worksheet.getCell('D10'), false, 12);
+
+                // Bằng chữ
+                worksheet.getCell('A11').value = 'Bằng chữ:';
+                applyTimesNewRoman(worksheet.getCell('A11'), false, 12);
+
+                worksheet.mergeCells('B11:H11');
+                worksheet.getCell('B11').value = amountInWords;
+                applyTimesNewRoman(worksheet.getCell('B11'), true, 12);
+
+                // Phương thức thanh toán
+                worksheet.mergeCells('A12:H12');
+                worksheet.getCell('A12').value = '2. Phương thức thanh toán: Chuyển khoản vào';
+                applyTimesNewRoman(worksheet.getCell('A12'), false, 12);
+
+                worksheet.mergeCells('A13:H13');
+                worksheet.getCell('A13').value = 'Số tài khoản: 156939258 tại Ngân hàng VPBank - CN Thăng Long';
+                applyTimesNewRoman(worksheet.getCell('A13'), true, 12);
+
+                worksheet.mergeCells('A14:H14');
+                worksheet.getCell('A14').value = 'Chủ tài khoản: Công Ty TNHH Sản Xuất Và Dịch Vụ Đức Thành (DUC THANH SERPRO)';
+                applyTimesNewRoman(worksheet.getCell('A14'), true, 12);
+
+                // Thời hạn thanh toán
+                worksheet.mergeCells('A15:H15');
+                worksheet.getCell('A15').value = '3. Thời hạn thanh toán: Trong 01-03 ngày làm việc sau khi hai bên hoàn thiện bộ hồ sơ thanh toán.';
+                applyTimesNewRoman(worksheet.getCell('A15'), false, 12);
+
+                // Lời chào
+                worksheet.mergeCells('A17:H17');
+                worksheet.getCell('A17').value = 'Công Ty TNHH Sản Xuất Và Dịch Vụ Đức Thành xin cảm ơn sự tin tưởng của Quý Công ty và rất mong';
+                applyTimesNewRoman(worksheet.getCell('A17'), false, 12);
+
+                worksheet.mergeCells('A18:H18');
+                worksheet.getCell('A18').value = 'được hợp tác lâu dài với Quý Công ty.';
+                applyTimesNewRoman(worksheet.getCell('A18'), false, 12);
+
+                worksheet.mergeCells('A19:H19');
+                worksheet.getCell('A19').value = 'Trân trọng!';
+                applyTimesNewRoman(worksheet.getCell('A19'), false, 12);
+
+                // Chữ ký
+                worksheet.mergeCells('F21:H21');
+                worksheet.getCell('F21').value = `Hà Nội, Ngày ….. tháng …. năm ….`;
+                applyTimesNewRoman(worksheet.getCell('F21'), false, 12);
+                worksheet.getCell('F21').alignment = { horizontal: 'center' };
+
+                worksheet.mergeCells('F22:H22');
+                worksheet.getCell('F22').value = 'ĐẠI DIỆN CÔNG TY';
+                applyTimesNewRoman(worksheet.getCell('F22'), true, 12);
+                worksheet.getCell('F22').alignment = { horizontal: 'center' };
+
+                // Xuất file
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const fileName = `De_nghi_thanh_toan_${orderNumber}.xlsx`;
                 saveAs(blob, fileName);
 
             } catch (error) {
                 console.error('Error exporting to Excel:', error);
-                alert('Có lỗi khi xuất file Excel. Vui lòng thử lại sau.');
+                document.getElementById('error-message').textContent = 'Lỗi khi xuất file Excel: ' + error.message;
+                document.getElementById('error-message').style.display = 'block';
             } finally {
                 document.getElementById('loading').style.display = 'none';
             }
