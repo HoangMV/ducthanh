@@ -10,6 +10,10 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" type="text/css"
+        href="https://cdn.jsdelivr.net/gh/lelinh014756/fui-toast-js@master/assets/css/toast@1.0.1/fuiToast.min.css">
+    <script type="text/javascript"
+        src="https://cdn.jsdelivr.net/gh/lelinh014756/fui-toast-js@master/assets/js/toast@1.0.1/fuiToast.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -169,6 +173,8 @@
 </head>
 
 <body class="bg-gray-50 min-h-screen">
+    <div id="fui-toast"></div>
+
     <!-- Loading Overlay -->
     <div id="loadingOverlay"
         class="fixed inset-0 bg-gray-800/70 backdrop-blur-sm z-50 flex justify-center items-center hidden transition-opacity duration-300">
@@ -592,17 +598,60 @@
                             required>
                     </div>
 
+                    <!-- Thay thế trường Loại hàng hoá hiện tại -->
                     <div class="form-group">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Loại hàng hoá</label>
-                        <input type="text" id="modalLoaiHangHoa" class="w-full p-2 border border-gray-300 rounded-lg">
+                        <select id="modalLoaiHangHoa" class="w-full p-2 border border-gray-300 rounded-lg">
+                            <option value="">-- Chọn --</option>
+                            <option value="Decal">Decal</option>
+                            <option value="Túi giấy">Túi giấy</option>
+                            <option value="Tờ gấp">Tờ gấp</option>
+                            <option value="Hộp giấy">Hộp giấy</option>
+                            <option value="Hộp cứng">Hộp cứng</option>
+                            <option value="Tờ rơi">Tờ rơi</option>
+                            <option value="Catalogue">Catalogue</option>
+                            <option value="Voucher">Voucher</option>
+                            <option value="Thiệp">Thiệp</option>
+                            <option value="Phong bì">Phong bì</option>
+                            <option value="Poster">Poster</option>
+                            <option value="Hoá đơn">Hoá đơn</option>
+                            <option value="Thùng Carton">Thùng Carton</option>
+                            <option value="Formex">Formex</option>
+                            <option value="Bạt">Bạt</option>
+                            <option value="Decal PP">Decal PP</option>
+                            <option value="PVC">PVC</option>
+                            <option value="PTK">PTK</option>
+                            <option value="Standee">Standee</option>
+                            <option value="Mica">Mica</option>
+                            <option value="Thẻ nhựa">Thẻ nhựa</option>
+                            <option value="Tag treo">Tag treo</option>
+                            <option value="Hashtag">Hashtag</option>
+                            <option value="custom">Khác...</option>
+                        </select>
+                        <input type="text" id="modalLoaiHangHoaCustom"
+                            class="w-full p-2 border border-gray-300 rounded-lg mt-1 hidden"
+                            placeholder="Nhập loại hàng hoá">
                     </div>
 
-
-
-
+                    <!-- Thay thế trường Đơn vị tính hiện tại -->
                     <div class="form-group">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Đơn vị tính</label>
-                        <input type="text" id="modalDonViTinh" class="w-full p-2 border border-gray-300 rounded-lg">
+                        <select id="modalDonViTinh" class="w-full p-2 border border-gray-300 rounded-lg">
+                            <option value="">-- Chọn --</option>
+                            <option value="Chiếc">Chiếc</option>
+                            <option value="Tờ">Tờ</option>
+                            <option value="Thành phẩm">Thành phẩm</option>
+                            <option value="Gói">Gói</option>
+                            <option value="Bộ">Bộ</option>
+                            <option value="Hộp">Hộp</option>
+                            <option value="Tấm">Tấm</option>
+                            <option value="Quyển">Quyển</option>
+                            <option value="kg">kg</option>
+                            <option value="custom">Khác...</option>
+                        </select>
+                        <input type="text" id="modalDonViTinhCustom"
+                            class="w-full p-2 border border-gray-300 rounded-lg mt-1 hidden"
+                            placeholder="Nhập đơn vị tính">
                     </div>
 
                     <div class="form-group">
@@ -749,7 +798,6 @@
 
                     // Display employee name if present
                     if (this.employeeName) {
-                        // You could add a small element in the header to show who's logged in
                         const headerDiv = document.querySelector('header div.flex.items-center.space-x-4');
                         if (headerDiv) {
                             const userInfoElement = document.createElement('div');
@@ -764,6 +812,8 @@
                     this.generateNewOrderCode();
                     this.setDefaultDate();
                     this.setDefaultDate1();
+
+                    // Load data in parallel
                     await Promise.all([
                         this.loadKhachHangList(),
                         this.loadNhanVienList()
@@ -781,6 +831,7 @@
                     this.showAlert('error', 'Lỗi khởi tạo', 'Đã xảy ra lỗi khi khởi tạo ứng dụng. Vui lòng thử lại sau.');
                 }
             }
+
 
             // Add this new method to set the employee from URL
             setEmployeeFromUrl() {
@@ -895,6 +946,33 @@
                         const nguonKhachHang = document.getElementById('nguonKhachHang');
                         nguonKhachHang.classList.remove('hidden');
                         nguonKhachHang.value = '';
+                    }
+                });
+
+                // Khởi tạo quản lý dropdown tùy chỉnh
+                this.loaiHangHoaManager = new CustomDropdownManager('modalLoaiHangHoa', 'savedLoaiHangHoa');
+                this.donViTinhManager = new CustomDropdownManager('modalDonViTinh', 'savedDonViTinh');
+
+                // Sự kiện cho dropdowns trong modal
+                document.getElementById('modalDonViTinh').addEventListener('change', function () {
+                    const customInput = document.getElementById('modalDonViTinhCustom');
+                    if (this.value === 'custom') {
+                        customInput.classList.remove('hidden');
+                        customInput.focus();
+                    } else {
+                        customInput.classList.add('hidden');
+                        customInput.value = '';
+                    }
+                });
+
+                document.getElementById('modalLoaiHangHoa').addEventListener('change', function () {
+                    const customInput = document.getElementById('modalLoaiHangHoaCustom');
+                    if (this.value === 'custom') {
+                        customInput.classList.remove('hidden');
+                        customInput.focus();
+                    } else {
+                        customInput.classList.add('hidden');
+                        customInput.value = '';
                     }
                 });
 
@@ -1276,50 +1354,145 @@
                 newRow.dataset.tongGiaTri = '0';
 
                 newRow.innerHTML = `
-  <td class="py-3 px-4 border-b border-gray-200">
-    <button type="button" class="text-blue-600 hover:text-blue-800" onclick="openHangHoaDetail(this)">
-      <i class="fas fa-edit"></i>
+<td class="py-3 px-4 border-b border-gray-200">
+  <button type="button" class="text-blue-600 hover:text-blue-800" onclick="openHangHoaDetail(this)">
+    <i class="fas fa-edit"></i>
+  </button>
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <input type="text" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Tên hàng hoá" required>
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <select class="w-full p-2 border border-gray-300 rounded-lg unit-select">
+    <option value="">-- Chọn --</option>
+    <option value="Chiếc">Chiếc</option>
+    <option value="Tờ">Tờ</option>
+    <option value="Thành phẩm">Thành phẩm</option>
+    <option value="Gói">Gói</option>
+    <option value="Bộ">Bộ</option>
+    <option value="Hộp">Hộp</option>
+    <option value="Tấm">Tấm</option>
+    <option value="Quyển">Quyển</option>
+    <option value="kg">kg</option>
+    <option value="custom">Khác...</option>
+  </select>
+  <input type="text" class="w-full p-2 border border-gray-300 rounded-lg mt-1 custom-unit hidden" placeholder="Nhập đơn vị tính">
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <input type="number" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Số lượng" 
+      min="0" step="1" value="1">
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <input type="number" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Đơn giá">
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <input type="text" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50" placeholder="Thành tiền" readonly>
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <input type="text" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50" placeholder="VAT" readonly>
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <input type="text" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50" placeholder="Tổng giá trị" readonly>
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <div class="flex space-x-2">
+    <button type="button" class="text-green-500 hover:text-green-700" onclick="copyRow(this)">
+      <i class="fas fa-copy"></i>
     </button>
-  </td>
-  <td class="py-3 px-4 border-b border-gray-200">
-    <input type="text" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Tên hàng hoá" required>
-  </td>
-  <td class="py-3 px-4 border-b border-gray-200">
-    <input type="text" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Đơn vị tính">
-  </td>
-  <td class="py-3 px-4 border-b border-gray-200">
-    <input type="number" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Số lượng" 
-        min="0" step="1" value="1">
-  </td>
-  <td class="py-3 px-4 border-b border-gray-200">
-    <input type="number" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Đơn giá">
-  </td>
-  <td class="py-3 px-4 border-b border-gray-200">
-    <input type="text" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50" placeholder="Thành tiền" readonly>
-  </td>
-  <td class="py-3 px-4 border-b border-gray-200">
-    <input type="text" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50" placeholder="VAT" readonly>
-  </td>
-  <td class="py-3 px-4 border-b border-gray-200">
-    <input type="text" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50" placeholder="Tổng giá trị" readonly>
-  </td>
-  <td class="py-3 px-4 border-b border-gray-200">
-    <div class="flex space-x-2">
-      <button type="button" class="text-green-500 hover:text-green-700" onclick="copyRow(this)">
-        <i class="fas fa-copy"></i>
-      </button>
-      <button type="button" class="text-red-500 hover:text-red-700" onclick="deleteRow(this)">
-        <i class="fas fa-trash"></i>
-      </button>
-    </div>
-  </td>
+    <button type="button" class="text-red-500 hover:text-red-700" onclick="deleteRow(this)">
+      <i class="fas fa-trash"></i>
+    </button>
+  </div>
+</td>
 `;
                 tableBody.appendChild(newRow);
 
-                // Add change listeners to input fields
+                // Tải các tùy chọn đã lưu cho đơn vị tính trong dòng mới
+                const unitSelect = newRow.querySelector('.unit-select');
+                if (unitSelect) {
+                    try {
+                        const savedUnits = JSON.parse(localStorage.getItem('savedDonViTinh')) || [];
+                        const customOption = Array.from(unitSelect.options).find(opt => opt.value === 'custom');
+                        const customPosition = customOption ?
+                            Array.from(unitSelect.options).indexOf(customOption) :
+                            unitSelect.options.length;
+
+                        savedUnits.forEach(unit => {
+                            // Kiểm tra nếu tùy chọn đã tồn tại
+                            if (!Array.from(unitSelect.options).some(opt => opt.value === unit)) {
+                                const option = document.createElement('option');
+                                option.value = unit;
+                                option.textContent = unit;
+                                option.classList.add('user-added');
+                                unitSelect.insertBefore(option, unitSelect.options[customPosition]);
+                            }
+                        });
+                    } catch (error) {
+                        console.error('Lỗi khi tải đơn vị tính đã lưu:', error);
+                    }
+                }
+
+                // Thêm sự kiện cho các input để tính toán
                 const inputs = newRow.querySelectorAll('input');
                 inputs[2].addEventListener('input', () => this.calculateRowValues(newRow));
                 inputs[3].addEventListener('input', () => this.calculateRowValues(newRow));
+
+                // Xử lý sự kiện cho input đơn vị tính tùy chỉnh
+                const customUnitInput = newRow.querySelector('.custom-unit');
+                if (customUnitInput && unitSelect) {
+                    customUnitInput.addEventListener('blur', (e) => {
+                        if (e.target.value && unitSelect.value === 'custom') {
+                            try {
+                                // Thêm vào dropdown
+                                const value = e.target.value;
+                                const customOption = Array.from(unitSelect.options).find(opt => opt.value === 'custom');
+                                const customPosition = customOption ?
+                                    Array.from(unitSelect.options).indexOf(customOption) :
+                                    unitSelect.options.length;
+
+                                // Kiểm tra nếu tùy chọn đã tồn tại
+                                if (!Array.from(unitSelect.options).some(opt => opt.value === value)) {
+                                    const option = document.createElement('option');
+                                    option.value = value;
+                                    option.textContent = value;
+                                    option.classList.add('user-added');
+                                    unitSelect.insertBefore(option, unitSelect.options[customPosition]);
+                                }
+
+                                // Chọn tùy chọn mới
+                                unitSelect.value = value;
+
+                                // Lưu vào localStorage
+                                const savedUnits = JSON.parse(localStorage.getItem('savedDonViTinh')) || [];
+                                if (!savedUnits.includes(value)) {
+                                    savedUnits.push(value);
+                                    localStorage.setItem('savedDonViTinh', JSON.stringify(savedUnits));
+                                }
+
+                                // Ẩn ô input tùy chỉnh
+                                e.target.classList.add('hidden');
+                            } catch (error) {
+                                console.error('Lỗi khi thêm đơn vị tính tùy chỉnh:', error);
+                            }
+                        }
+                    });
+                }
+
+                // Thêm sự kiện cho dropdown đơn vị tính
+                if (unitSelect) {
+                    unitSelect.addEventListener('change', (e) => {
+                        const customInput = newRow.querySelector('.custom-unit');
+                        if (customInput) {
+                            if (e.target.value === 'custom') {
+                                customInput.classList.remove('hidden');
+                                customInput.focus();
+                            } else {
+                                customInput.classList.add('hidden');
+                                customInput.value = '';
+                            }
+                        }
+                    });
+                }
 
                 this.calculateRowValues(newRow);
                 newRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1428,14 +1601,33 @@
                 hangHoaRows.forEach((row, index) => {
                     const inputs = row.querySelectorAll('input');
 
-                    // Create hang hoa item using visible inputs and data attributes
+                    // Xử lý đơn vị tính - lấy từ select hoặc custom input
+                    const unitSelect = row.querySelector('.unit-select');
+                    let donViTinh = '';
+
+                    if (unitSelect) {
+                        if (unitSelect.value === 'custom') {
+                            const customInput = row.querySelector('.custom-unit');
+                            donViTinh = customInput ? customInput.value : '';
+                        } else if (unitSelect.value) {
+                            donViTinh = unitSelect.options[unitSelect.selectedIndex].text;
+                        }
+                    } else {
+                        // Tương thích ngược với dữ liệu cũ
+                        donViTinh = row.querySelector('td:nth-child(3) input')?.value || '';
+                    }
+
+                    // Lấy loại hàng hóa từ data attribute (đã được đặt trong handleUpdateHangHoa)
+                    const loaiHangHoa = row.dataset.loaiHangHoa || '';
+
+                    // Tạo đối tượng chứa thông tin hàng hóa
                     const hangHoaItem = {
                         'ID hàng hoá': this.generateHangHoaID(maDonHang, index + 1),
                         'ID đơn hàng': maDonHang,
                         'Tên hàng hoá': inputs[0].value,
-                        'Loại hàng hoá': row.dataset.loaiHangHoa || '',
+                        'Loại hàng hoá': loaiHangHoa,
                         'Mô tả': row.dataset.moTa || '',
-                        'Đơn vị tính': inputs[1].value,
+                        'Đơn vị tính': donViTinh,
                         'Số lượng': parseFloat(inputs[2].value) || 0,
                         'Đơn giá': parseFloat(inputs[3].value) || 0,
                         'Thành tiền hàng': parseFloat(row.dataset.thanhTien) || 0,
@@ -1446,9 +1638,9 @@
                         'Tiền thuế': parseFloat(row.dataset.tienThue) || 0,
                         'Phí suất quản lý điều chỉnh': parseFloat(row.dataset.phiQuanLy) / 100 || 0,
                         'Tổng giá trị': parseFloat(row.dataset.tongGiaTri) || 0,
-                        'Tiền hoàn trả cho khách': parseInt(row.dataset.tienHoanTra.replace(/\./g, '')) || 0, // Xử lý chuỗi có dấu phân cách hàng nghìn
+                        'Tiền hoàn trả cho khách': parseInt(row.dataset.tienHoanTra.replace(/\./g, '')) || 0,
                         'Ghi chú': row.dataset.ghiChu || '',
-                        'Người tạo': this.employeeName, // Use the employee name from URL
+                        'Người tạo': this.employeeName,
                         'Ngày tạo': this.formatDate(new Date())
                     };
 
@@ -1459,6 +1651,7 @@
             }
 
             // Lưu dữ liệu vào AppSheet 
+            // 4. Sử dụng Promise.all cho tất cả request API để tăng tốc độ
             async saveDataToAppSheet() {
                 try {
                     // Kiểm tra các trường bắt buộc
@@ -1482,159 +1675,111 @@
                         throw new Error('Vui lòng thêm ít nhất một hàng hóa vào đơn hàng');
                     }
 
-                    this.showLoading('Đang lưu dữ liệu...');
+                    // Tạo promise toast thay vì loading overlay
+                    const savePromise = new Promise(async (resolve, reject) => {
+                        try {
+                            // Thu thập dữ liệu đơn hàng
+                            const donHangData = {
+                                'ID đơn hàng': document.getElementById('maDonHang').value,
+                                'Mã đơn hàng': document.getElementById('maDonHang').value,
+                                'Tên đơn hàng': tenDonHang,
+                                'ID khách hàng': khachHang,
+                                'ID nhân viên': idNhanVien,
+                                'Nguồn khách hàng': nguonKhachHangValue,
+                                'Ngày đặt hàng': ngayDatHang,
+                                'Ngày hạch toán': document.getElementById('ngayHachToan').value || '',
+                                'Giá sản xuất tạm tính': this.parseCurrency(document.getElementById('giaSanXuatTamTinh').value) || 0,
+                                'Tổng tiền hàng': this.parseCurrency(document.getElementById('tongTienHang').value) || 0,
+                                'Tổng giá trị đơn': this.parseCurrency(document.getElementById('tongGiaTriDon').value) || 0,
+                                'Ghi chú': document.getElementById('ghiChu').value || '',
+                                'Người tạo': this.employeeName
+                            };
 
-                    // Thu thập dữ liệu đơn hàng
-                    const donHangData = {
-                        'ID đơn hàng': document.getElementById('maDonHang').value,
-                        'Mã đơn hàng': document.getElementById('maDonHang').value,
-                        'Tên đơn hàng': tenDonHang,
-                        'ID khách hàng': khachHang,
-                        'ID nhân viên': idNhanVien, // This is the employee ID field
-                        'Nguồn khách hàng': nguonKhachHangValue,
-                        'Ngày đặt hàng': ngayDatHang,
-                        'Ngày hạch toán': document.getElementById('ngayHachToan').value || '',
-                        'Giá sản xuất tạm tính': this.parseCurrency(document.getElementById('giaSanXuatTamTinh').value) || 0,
-                        'Tổng tiền hàng': this.parseCurrency(document.getElementById('tongTienHang').value) || 0,
-                        'Tổng giá trị đơn': this.parseCurrency(document.getElementById('tongGiaTriDon').value) || 0,
-                        'Ghi chú': document.getElementById('ghiChu').value || '',
-                        'Người tạo': this.employeeName
-                    };
+                            // Tạo payload cho đơn hàng
+                            const donHangPayload = {
+                                "Action": "Add",
+                                "Properties": {},
+                                "Rows": [donHangData]
+                            };
 
-                    // Tạo payload cho đơn hàng
-                    const donHangPayload = {
-                        "Action": "Add",
-                        "Properties": {
-                        },
-                        "Rows": [donHangData]
-                    };
+                            // Thu thập dữ liệu hàng hóa
+                            this.hangHoaList = this.collectHangHoaData();
 
-                    // Gửi request đơn hàng
-                    try {
-                        console.log('Sending order data:', JSON.stringify(donHangPayload, null, 2));
-
-                        const responseDonHang = await axios({
-                            method: 'POST',
-                            url: `https://www.appsheet.com/api/v2/apps/${this.appId}/tables/Đơn hàng/Action`,
-                            headers: {
-                                'ApplicationAccessKey': this.accessKey,
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json'
-                            },
-                            data: donHangPayload,
-                            validateStatus: function (status) {
-                                return status >= 200 && status < 300;
+                            // Kiểm tra dữ liệu hàng hóa
+                            const hasEmptyItems = this.hangHoaList.some(item => !item['Tên hàng hoá']);
+                            if (hasEmptyItems) {
+                                throw new Error('Vui lòng nhập tên cho tất cả các hàng hóa');
                             }
-                        });
 
-                        console.log('Order API Response:', {
-                            status: responseDonHang.status,
-                            statusText: responseDonHang.statusText,
-                            data: responseDonHang.data,
-                            headers: responseDonHang.headers
-                        });
+                            // Tạo payload dữ liệu hàng hóa
+                            const hangHoaPayload = {
+                                "Action": "Add",
+                                "Properties": {},
+                                "Rows": this.hangHoaList
+                            };
 
-                        if (responseDonHang.status !== 200) {
-                            throw new Error(`API Error: ${responseDonHang.status} - ${JSON.stringify(responseDonHang.data)}`);
+                            // Sử dụng Promise.all để gửi cả hai request cùng lúc
+                            const [responseDonHang, responseHangHoa] = await Promise.all([
+                                axios({
+                                    method: 'POST',
+                                    url: `https://www.appsheet.com/api/v2/apps/${this.appId}/tables/Đơn hàng/Action`,
+                                    headers: {
+                                        'ApplicationAccessKey': this.accessKey,
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json'
+                                    },
+                                    data: donHangPayload,
+                                    validateStatus: function (status) {
+                                        return status >= 200 && status < 300;
+                                    }
+                                }),
+                                axios({
+                                    method: 'POST',
+                                    url: `https://www.appsheet.com/api/v2/apps/${this.appId}/tables/Hàng hoá/Action`,
+                                    headers: {
+                                        'ApplicationAccessKey': this.accessKey,
+                                        'Content-Type': 'application/json'
+                                    },
+                                    data: hangHoaPayload
+                                })
+                            ]);
+
+                            // Kiểm tra kết quả
+                            if (responseDonHang.status !== 200) {
+                                throw new Error(`API Error: ${responseDonHang.status} - ${JSON.stringify(responseDonHang.data)}`);
+                            }
+
+                            if (responseHangHoa.status !== 200) {
+                                throw new Error(`API Error: ${responseHangHoa.status} - ${JSON.stringify(responseHangHoa.data)}`);
+                            }
+
+                            // Cập nhật trạng thái tiến trình
+                            this.updateProgressSteps(3);
+                            resolve("Lưu thành công!");
+
+                            // Reset form sau khi lưu thành công
+                            setTimeout(() => this.resetForm(), 1500);
+                        } catch (error) {
+                            reject(error);
                         }
-                    } catch (error) {
-                        console.error('Order save error details:', error);
-                        if (error.response) {
-                            console.error('Response Status:', error.response.status);
-                            console.error('Response Data:', JSON.stringify(error.response.data));
-                            console.error('Response Headers:', error.response.headers);
-                        }
-                        throw new Error(`Failed to save order: ${error.message}`);
-                    }
-
-                    // Thu thập dữ liệu hàng hóa
-                    this.hangHoaList = this.collectHangHoaData();
-
-                    // Kiểm tra dữ liệu hàng hóa
-                    const hasEmptyItems = this.hangHoaList.some(item => !item['Tên hàng hoá']);
-                    if (hasEmptyItems) {
-                        throw new Error('Vui lòng nhập tên cho tất cả các hàng hóa');
-                    }
-
-                    console.log('Dữ liệu đơn hàng gửi đi:', JSON.stringify(donHangData));
-                    console.log('Dữ liệu hàng hóa gửi đi:', JSON.stringify(this.hangHoaList));
-
-                    // Tạo payload dữ liệu hàng hóa
-                    const hangHoaPayload = {
-                        "Action": "Add",
-                        "Properties": {
-                        },
-                        "Rows": this.hangHoaList
-                    };
-
-                    // Lưu chi tiết hàng hóa (bảng con)
-                    try {
-                        const responseHangHoa = await axios({
-                            method: 'POST',
-                            url: `https://www.appsheet.com/api/v2/apps/${this.appId}/tables/Hàng hoá/Action`,
-                            headers: {
-                                'ApplicationAccessKey': this.accessKey,
-                                'Content-Type': 'application/json'
-                            },
-                            data: hangHoaPayload
-                        });
-
-                        console.log('Phản hồi hàng hóa đầy đủ:', JSON.stringify(responseHangHoa));
-                        console.log('Status:', responseHangHoa.status);
-                        console.log('Status Text:', responseHangHoa.statusText);
-
-                        if (!responseHangHoa.data || responseHangHoa.status !== 200) {
-                            throw new Error('Phản hồi từ API AppSheet không thành công khi lưu hàng hóa');
-                        }
-                    } catch (errorHangHoa) {
-                        console.error('Lỗi chi tiết khi lưu hàng hóa:', errorHangHoa);
-                        if (errorHangHoa.response) {
-                            console.error('Status:', errorHangHoa.response.status);
-                            console.error('Status Text:', errorHangHoa.response.statusText);
-                            console.error('Data:', JSON.stringify(errorHangHoa.response.data));
-                        }
-                        throw new Error(`Lưu hàng hóa thất bại: ${errorHangHoa.message || 'Lỗi không xác định'}`);
-                    }
-
-                    // Cập nhật trạng thái tiến trình
-                    this.updateProgressSteps(3);
-
-                    this.hideLoading();
-
-                    this.showAlert('success', 'Lưu thành công!', 'Đã lưu đơn hàng và hàng hóa thành công!').then(() => {
-                        // Reset form sau khi lưu thành công
-                        this.resetForm();
                     });
 
-                } catch (error) {
-                    this.hideLoading();
-                    console.error('Lỗi khi lưu dữ liệu:', error);
-
-                    // Xử lý lỗi từ API một cách cụ thể
-                    if (error.response && error.response.data && error.response.data.detail) {
-                        const errorDetail = error.response.data.detail;
-
-                        // Kiểm tra lỗi mã đơn hàng
-                        if (errorDetail.includes("Invalid value for column Mã đơn hàng")) {
-                            // Đánh dấu trường mã đơn hàng
-                            const maDonHangInput = document.getElementById('maDonHang');
-                            maDonHangInput.classList.add('border-red-500');
-
-                            // Hiển thị thông báo lỗi rõ ràng
-                            this.showAlert('error', 'Lỗi mã đơn hàng!',
-                                'Mã đơn hàng không hợp lệ. Vui lòng sử dụng định dạng khác (ví dụ: chỉ dùng số) hoặc mã đơn hàng đã tồn tại.');
-
-                            // Tự động focus vào trường lỗi
-                            maDonHangInput.focus();
-                            return;
+                    // Sử dụng FuiToast.promise
+                    FuiToast.promise(
+                        savePromise,
+                        {
+                            loading: 'Đang lưu dữ liệu...',
+                            success: () => 'Đã lưu đơn hàng và hàng hóa thành công!',
+                            error: (error) => `Lỗi: ${error.message || 'Có lỗi xảy ra khi lưu thông tin!'}`
+                        },
+                        {
+                            isClose: true
                         }
+                    );
 
-                        // Các loại lỗi khác từ API
-                        this.showAlert('error', 'Lỗi từ hệ thống!', errorDetail);
-                    } else {
-                        // Lỗi chung
-                        this.showAlert('error', 'Lỗi!', error.message || 'Có lỗi xảy ra khi lưu thông tin! Vui lòng thử lại.');
-                    }
+                } catch (error) {
+                    console.error('Lỗi khi lưu dữ liệu:', error);
+                    FuiToast.error(error.message || 'Có lỗi xảy ra khi lưu thông tin! Vui lòng thử lại.');
                 }
             }
 
@@ -1644,14 +1789,69 @@
                 this.currentEditingRow = button.closest('tr');
                 const inputs = this.currentEditingRow.querySelectorAll('input');
 
-                // Populate modal fields with current row data
+                // Điền dữ liệu vào các trường trong modal
                 document.getElementById('modalTenHangHoa').value = inputs[0].value || '';
-                document.getElementById('modalDonViTinh').value = inputs[1].value || '';
+
+                // Xử lý đơn vị tính - lấy từ select hoặc custom input
+                const unitSelect = this.currentEditingRow.querySelector('.unit-select');
+                const customUnitInput = this.currentEditingRow.querySelector('.custom-unit');
+                const modalDonViTinh = document.getElementById('modalDonViTinh');
+                const modalDonViTinhCustom = document.getElementById('modalDonViTinhCustom');
+
+                if (unitSelect) {
+                    if (unitSelect.value === 'custom' && customUnitInput) {
+                        modalDonViTinh.value = 'custom';
+                        modalDonViTinhCustom.value = customUnitInput.value;
+                        modalDonViTinhCustom.classList.remove('hidden');
+                    } else {
+                        modalDonViTinh.value = unitSelect.value;
+                        modalDonViTinhCustom.classList.add('hidden');
+                    }
+                } else {
+                    // Tương thích ngược với dữ liệu cũ
+                    const donViTinhValue = this.currentEditingRow.querySelector('td:nth-child(3) input')?.value || '';
+                    // Tìm xem có trùng với bất kỳ tùy chọn có sẵn nào không
+                    const option = Array.from(modalDonViTinh.options)
+                        .find(opt => opt.value && opt.value !== 'custom' && opt.text === donViTinhValue);
+
+                    if (option) {
+                        modalDonViTinh.value = option.value;
+                        modalDonViTinhCustom.classList.add('hidden');
+                    } else if (donViTinhValue) {
+                        modalDonViTinh.value = 'custom';
+                        modalDonViTinhCustom.value = donViTinhValue;
+                        modalDonViTinhCustom.classList.remove('hidden');
+                    } else {
+                        modalDonViTinh.value = '';
+                        modalDonViTinhCustom.classList.add('hidden');
+                    }
+                }
+
                 document.getElementById('modalSoLuong').value = inputs[2].value || '1';
                 document.getElementById('modalDonGia').value = inputs[3].value || '0';
 
-                // Get data from data attributes or set defaults
-                document.getElementById('modalLoaiHangHoa').value = this.currentEditingRow.dataset.loaiHangHoa || '';
+                // Xử lý loại hàng hoá
+                const loaiHangHoa = this.currentEditingRow.dataset.loaiHangHoa || '';
+                const modalLoaiHangHoa = document.getElementById('modalLoaiHangHoa');
+                const modalLoaiHangHoaCustom = document.getElementById('modalLoaiHangHoaCustom');
+
+                // Kiểm tra xem giá trị có trùng với bất kỳ tùy chọn có sẵn nào không
+                const loaiOption = Array.from(modalLoaiHangHoa.options)
+                    .find(opt => opt.value && opt.value !== 'custom' && opt.text === loaiHangHoa);
+
+                if (loaiOption) {
+                    modalLoaiHangHoa.value = loaiOption.value;
+                    modalLoaiHangHoaCustom.classList.add('hidden');
+                } else if (loaiHangHoa) {
+                    modalLoaiHangHoa.value = 'custom';
+                    modalLoaiHangHoaCustom.value = loaiHangHoa;
+                    modalLoaiHangHoaCustom.classList.remove('hidden');
+                } else {
+                    modalLoaiHangHoa.value = '';
+                    modalLoaiHangHoaCustom.classList.add('hidden');
+                }
+
+                // Lấy dữ liệu từ các data attributes hoặc đặt giá trị mặc định
                 document.getElementById('modalMoTa').value = this.currentEditingRow.dataset.moTa || '';
                 document.getElementById('modalPhuPhiDieuChinh').value = this.currentEditingRow.dataset.phuPhiDieuChinh || '0';
                 document.getElementById('modalThueSuat').value = this.currentEditingRow.dataset.thueSuat || '10';
@@ -1659,7 +1859,7 @@
                 document.getElementById('modalTienHoanTra').value = this.currentEditingRow.dataset.tienHoanTra || '0';
                 document.getElementById('modalGhiChu').value = this.currentEditingRow.dataset.ghiChu || '';
 
-                // Calculate initial values
+                // Tính toán các giá trị ban đầu
                 this.calculateModalValues();
                 document.getElementById('hangHoaDetailModal').classList.remove('hidden');
             }
@@ -1712,15 +1912,51 @@
                 if (!this.currentEditingRow) return;
 
                 try {
-                    // Update row inputs
+                    // Cập nhật các giá trị trong hàng
                     const rowInputs = this.currentEditingRow.querySelectorAll('input');
                     rowInputs[0].value = document.getElementById('modalTenHangHoa').value;
-                    rowInputs[1].value = document.getElementById('modalDonViTinh').value;
+
+                    // Xử lý đơn vị tính
+                    const modalDonViTinh = document.getElementById('modalDonViTinh');
+                    const modalDonViTinhCustom = document.getElementById('modalDonViTinhCustom');
+                    let donViTinhValue = modalDonViTinh.value;
+
+                    // Lấy select trong hàng
+                    const unitSelect = this.currentEditingRow.querySelector('.unit-select');
+                    const customUnitInput = this.currentEditingRow.querySelector('.custom-unit');
+
+                    if (unitSelect) {
+                        unitSelect.value = donViTinhValue;
+
+                        if (donViTinhValue === 'custom') {
+                            customUnitInput.value = modalDonViTinhCustom.value;
+                            customUnitInput.classList.remove('hidden');
+                        } else {
+                            customUnitInput.classList.add('hidden');
+                        }
+                    } else {
+                        // Tương thích ngược với dữ liệu cũ
+                        const donViTinhInput = this.currentEditingRow.querySelector('td:nth-child(3) input');
+                        if (donViTinhInput) {
+                            donViTinhInput.value = donViTinhValue === 'custom' ?
+                                modalDonViTinhCustom.value :
+                                modalDonViTinh.options[modalDonViTinh.selectedIndex].text;
+                        }
+                    }
+
+                    // Xử lý loại hàng hoá
+                    const modalLoaiHangHoa = document.getElementById('modalLoaiHangHoa');
+                    const modalLoaiHangHoaCustom = document.getElementById('modalLoaiHangHoaCustom');
+
+                    this.currentEditingRow.dataset.loaiHangHoa = modalLoaiHangHoa.value === 'custom' ?
+                        modalLoaiHangHoaCustom.value :
+                        modalLoaiHangHoa.options[modalLoaiHangHoa.selectedIndex].text;
+
+                    // Cập nhật các trường khác
                     rowInputs[2].value = document.getElementById('modalSoLuong').value;
                     rowInputs[3].value = document.getElementById('modalDonGia').value;
 
-                    // Update data attributes with raw values for calculation
-                    this.currentEditingRow.dataset.loaiHangHoa = document.getElementById('modalLoaiHangHoa').value;
+                    // Cập nhật các data attributes với giá trị thô để tính toán
                     this.currentEditingRow.dataset.moTa = document.getElementById('modalMoTa').value;
                     this.currentEditingRow.dataset.phuPhiDieuChinh = document.getElementById('modalPhuPhiDieuChinh').value;
                     this.currentEditingRow.dataset.thueSuat = document.getElementById('modalThueSuat').value;
@@ -1728,7 +1964,7 @@
                     this.currentEditingRow.dataset.tienHoanTra = document.getElementById('modalTienHoanTra').value;
                     this.currentEditingRow.dataset.ghiChu = document.getElementById('modalGhiChu').value;
 
-                    // Store calculated values
+                    // Lưu các giá trị đã tính toán
                     const thanhTienHang = this.parseCurrency(document.getElementById('modalThanhTienHang').value);
                     const thanhTienSauDieuChinh = this.parseCurrency(document.getElementById('modalThanhTienSauDieuChinh').value);
                     const tienThue = this.parseCurrency(document.getElementById('modalTienThue').value);
@@ -1739,14 +1975,14 @@
                     this.currentEditingRow.dataset.tienThue = tienThue;
                     this.currentEditingRow.dataset.tongGiaTri = tongGiaTri;
 
-                    // Recalculate values and update displayed formatted values
+                    // Tính toán lại giá trị và cập nhật các giá trị hiển thị đã được định dạng
                     this.calculateRowValues(this.currentEditingRow);
                     this.updateOrderTotals();
 
-                    // Close modal
+                    // Đóng modal
                     this.closeHangHoaDetailModal();
 
-                    // Show success message
+                    // Hiển thị thông báo thành công
                     Swal.fire({
                         icon: 'success',
                         title: 'Cập nhật thành công!',
@@ -1755,7 +1991,7 @@
                         timer: 1500
                     });
                 } catch (error) {
-                    console.error('Error updating row:', error);
+                    console.error('Lỗi cập nhật hàng:', error);
                     Swal.fire({
                         icon: 'error',
                         title: 'Lỗi!',
@@ -2290,85 +2526,291 @@
             }
 
             // Xuất file Excel
-            async exportExcelFile() {
+            // Nhập dữ liệu từ Excel
+            importDataFromExcel() {
                 try {
-                    this.showLoading('Đang xuất Excel...');
+                    const jsonDataStr = document.getElementById('importModal').dataset.jsonData;
+                    if (!jsonDataStr) {
+                        throw new Error('Không có dữ liệu để nhập. Vui lòng chọn file lại.');
+                    }
 
-                    // Import SheetJS if not already loaded
-                    await this.loadSheetJS();
+                    this.showLoading('Đang nhập dữ liệu...');
 
-                    // Get order data
-                    const maDonHang = document.getElementById('maDonHang').value;
+                    const jsonData = JSON.parse(jsonDataStr);
 
-                    // Get product items
-                    const hangHoaItems = this.collectHangHoaData();
+                    // Headers are in the first row
+                    const headers = jsonData[0];
+                    const dataRows = jsonData.slice(1);
 
-                    // Create worksheet data array
-                    const wsData = [
-                        ['Tên hàng hoá', 'Đơn vị tính', 'Số lượng', 'Đơn giá', 'Loại hàng hoá', 'Mô tả',
-                            'Phụ phí điều chỉnh', 'Thuế suất (%)', 'Phí suất quản lý điều chỉnh', 'Tiền hoàn trả cho khách', 'Ghi chú',
-                            'Thành tiền hàng', 'Thành tiền sau điều chỉnh', 'Tiền thuế', 'Tổng giá trị']
-                    ];
+                    // Find column indexes based on headers
+                    const colIndexes = {
+                        tenHangHoa: headers.findIndex(h => /tên.*hàng|hàng.*hóa/i.test(h)),
+                        donViTinh: headers.findIndex(h => /đơn.*vị|đơn.*tính/i.test(h)),
+                        soLuong: headers.findIndex(h => /số.*lượng/i.test(h)),
+                        donGia: headers.findIndex(h => /đơn.*giá/i.test(h)),
+                        loaiHangHoa: headers.findIndex(h => /loại.*hàng/i.test(h)),
+                        moTa: headers.findIndex(h => /mô.*tả/i.test(h)),
+                        phuPhi: headers.findIndex(h => /phụ.*phí/i.test(h)),
+                        thueSuat: headers.findIndex(h => /thuế.*suất/i.test(h)),
+                        phiQuanLy: headers.findIndex(h => /phí.*quản/i.test(h)),
+                        tienHoanTra: headers.findIndex(h => /tiền.*hoàn|hoàn.*trả/i.test(h)),
+                        ghiChu: headers.findIndex(h => /ghi.*chú/i.test(h))
+                    };
 
-                    // Add each item to worksheet data
-                    hangHoaItems.forEach(item => {
-                        wsData.push([
-                            item['Tên hàng hoá'],
-                            item['Đơn vị tính'],
-                            item['Số lượng'],
-                            item['Đơn giá'],
-                            item['Loại hàng hoá'],
-                            item['Mô tả'],
-                            item['Phụ phí điều chỉnh'],
-                            item['Thuế suất'],
-                            item['Phí suất quản lý điều chỉnh'],
-                            item['Tiền hoàn trả cho khách'],
-                            item['Ghi chú'],
-                            item['Thành tiền hàng'],
-                            item['Thành tiền sau điều chỉnh'],
-                            item['Tiền thuế'],
-                            item['Tổng giá trị']
-                        ]);
+                    // Check if required columns exist
+                    if (colIndexes.tenHangHoa === -1 || colIndexes.soLuong === -1 || colIndexes.donGia === -1) {
+                        throw new Error('File thiếu các cột bắt buộc (Tên hàng hoá, Số lượng hoặc Đơn giá).');
+                    }
+
+                    // Check if the chiTietSection is hidden and show it
+                    document.getElementById('chiTietSection').classList.remove('hidden');
+
+                    // For statistics
+                    let importCount = 0;
+                    let errorCount = 0;
+
+                    // Add each row to the product table
+                    dataRows.forEach(row => {
+                        try {
+                            // Skip empty rows (check if essential fields are empty)
+                            if (!row[colIndexes.tenHangHoa]) {
+                                return;
+                            }
+
+                            // Get values from row based on column indexes
+                            const getValue = (index, defaultValue) => {
+                                return index !== -1 && row[index] !== undefined ? row[index] : defaultValue;
+                            };
+
+                            const tenHangHoa = getValue(colIndexes.tenHangHoa, '');
+                            const donViTinh = getValue(colIndexes.donViTinh, '');
+                            const soLuong = parseFloat(getValue(colIndexes.soLuong, 1)) || 1;
+                            const donGia = parseFloat(getValue(colIndexes.donGia, 0)) || 0;
+                            const loaiHangHoa = getValue(colIndexes.loaiHangHoa, '');
+                            const moTa = getValue(colIndexes.moTa, '');
+                            const phuPhiDieuChinh = parseFloat(getValue(colIndexes.phuPhi, 0)) || 0;
+                            const thueSuat = parseFloat(getValue(colIndexes.thueSuat, 10)) || 10;
+                            const phiQuanLy = parseFloat(getValue(colIndexes.phiQuanLy, 0)) || 0;
+                            const tienHoanTra = parseFloat(getValue(colIndexes.tienHoanTra, 0)) || 0;
+                            const ghiChu = getValue(colIndexes.ghiChu, '');
+
+                            // Create a new row
+                            const tableBody = document.getElementById('chiTietTableBody');
+                            const newRow = document.createElement('tr');
+                            newRow.classList.add('animate-fade-in');
+
+                            // Set data attributes
+                            newRow.dataset.loaiHangHoa = loaiHangHoa;
+                            newRow.dataset.moTa = moTa;
+                            newRow.dataset.phuPhiDieuChinh = phuPhiDieuChinh;
+                            newRow.dataset.thueSuat = thueSuat;
+                            newRow.dataset.phiQuanLy = phiQuanLy;
+                            newRow.dataset.tienHoanTra = tienHoanTra;
+                            newRow.dataset.ghiChu = ghiChu;
+                            newRow.dataset.thanhTien = '0';
+                            newRow.dataset.thanhTienSauDieuChinh = '0';
+                            newRow.dataset.tienThue = '0';
+                            newRow.dataset.tongGiaTri = '0';
+
+                            // HTML cho hàng mới với dropdown đơn vị tính
+                            newRow.innerHTML = `
+<td class="py-3 px-4 border-b border-gray-200">
+  <button type="button" class="text-blue-600 hover:text-blue-800" onclick="openHangHoaDetail(this)">
+   <i class="fas fa-edit"></i>
+  </button>
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <input type="text" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Tên hàng hoá" value="${tenHangHoa}" required>
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <select class="w-full p-2 border border-gray-300 rounded-lg unit-select">
+    <option value="">-- Chọn --</option>
+    <option value="Chiếc">Chiếc</option>
+    <option value="Tờ">Tờ</option>
+    <option value="Thành phẩm">Thành phẩm</option>
+    <option value="Gói">Gói</option>
+    <option value="Bộ">Bộ</option>
+    <option value="Hộp">Hộp</option>
+    <option value="Tấm">Tấm</option>
+    <option value="Quyển">Quyển</option>
+    <option value="kg">kg</option>
+    <option value="custom">Khác...</option>
+  </select>
+  <input type="text" class="w-full p-2 border border-gray-300 rounded-lg mt-1 custom-unit hidden" placeholder="Nhập đơn vị tính">
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <input type="number" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Số lượng" 
+      min="0" step="1" value="${soLuong}">
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <input type="number" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Đơn giá" value="${donGia}">
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <input type="text" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50" placeholder="Thành tiền" readonly>
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <input type="text" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50" placeholder="VAT" readonly>
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <input type="text" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50" placeholder="Tổng giá trị" readonly>
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <div class="flex space-x-2">
+    <button type="button" class="text-green-500 hover:text-green-700" onclick="copyRow(this)">
+      <i class="fas fa-copy"></i>
+    </button>
+    <button type="button" class="text-red-500 hover:text-red-700" onclick="deleteRow(this)">
+      <i class="fas fa-trash"></i>
+    </button>
+  </div>
+</td>
+`;
+                            tableBody.appendChild(newRow);
+
+                            // Xử lý đơn vị tính trong hàng mới
+                            const unitSelect = newRow.querySelector('.unit-select');
+                            const customUnitInput = newRow.querySelector('.custom-unit');
+
+                            // Tải các tùy chọn đã lưu cho đơn vị tính
+                            try {
+                                const savedUnits = JSON.parse(localStorage.getItem('savedDonViTinh')) || [];
+                                const customOption = Array.from(unitSelect.options).find(opt => opt.value === 'custom');
+                                const customPosition = customOption ?
+                                    Array.from(unitSelect.options).indexOf(customOption) :
+                                    unitSelect.options.length;
+
+                                // Thêm các tùy chọn đã lưu vào dropdown
+                                savedUnits.forEach(unit => {
+                                    if (!Array.from(unitSelect.options).some(opt => opt.value === unit && opt.textContent === unit)) {
+                                        const option = document.createElement('option');
+                                        option.value = unit;
+                                        option.textContent = unit;
+                                        option.classList.add('user-added');
+                                        unitSelect.insertBefore(option, unitSelect.options[customPosition]);
+                                    }
+                                });
+
+                                // Kiểm tra xem giá trị đơn vị tính từ Excel có trùng với bất kỳ tùy chọn nào không
+                                const unitOption = Array.from(unitSelect.options)
+                                    .find(opt => opt.value && opt.value !== 'custom' && opt.textContent === donViTinh);
+
+                                if (unitOption) {
+                                    // Nếu trùng với tùy chọn có sẵn, chọn tùy chọn đó
+                                    unitSelect.value = unitOption.value;
+                                } else if (donViTinh) {
+                                    // Nếu là giá trị mới, thêm vào dropdown và lưu lại
+                                    const option = document.createElement('option');
+                                    option.value = donViTinh;
+                                    option.textContent = donViTinh;
+                                    option.classList.add('user-added');
+                                    unitSelect.insertBefore(option, unitSelect.options[customPosition]);
+
+                                    // Lưu vào localStorage nếu chưa có
+                                    if (!savedUnits.includes(donViTinh)) {
+                                        savedUnits.push(donViTinh);
+                                        localStorage.setItem('savedDonViTinh', JSON.stringify(savedUnits));
+                                    }
+
+                                    // Chọn giá trị mới
+                                    unitSelect.value = donViTinh;
+                                }
+                            } catch (error) {
+                                console.error('Lỗi khi xử lý đơn vị tính:', error);
+                                if (donViTinh) {
+                                    // Nếu có lỗi nhưng có giá trị, sử dụng input tùy chỉnh
+                                    unitSelect.value = 'custom';
+                                    customUnitInput.value = donViTinh;
+                                    customUnitInput.classList.remove('hidden');
+                                }
+                            }
+
+                            // Thêm sự kiện cho các trường input
+                            const rowInputs = newRow.querySelectorAll('input');
+                            rowInputs[2].addEventListener('input', () => this.calculateRowValues(newRow));
+                            rowInputs[3].addEventListener('input', () => this.calculateRowValues(newRow));
+
+                            // Thêm sự kiện cho dropdown đơn vị tính
+                            if (unitSelect) {
+                                unitSelect.addEventListener('change', (e) => {
+                                    if (e.target.value === 'custom') {
+                                        customUnitInput.classList.remove('hidden');
+                                        customUnitInput.focus();
+                                    } else {
+                                        customUnitInput.classList.add('hidden');
+                                        customUnitInput.value = '';
+                                    }
+                                });
+                            }
+
+                            // Thêm sự kiện cho ô input tùy chỉnh
+                            if (customUnitInput && unitSelect) {
+                                customUnitInput.addEventListener('blur', (e) => {
+                                    if (e.target.value && unitSelect.value === 'custom') {
+                                        try {
+                                            // Thêm vào dropdown
+                                            const value = e.target.value;
+                                            const customOption = Array.from(unitSelect.options).find(opt => opt.value === 'custom');
+                                            const customPosition = customOption ?
+                                                Array.from(unitSelect.options).indexOf(customOption) :
+                                                unitSelect.options.length;
+
+                                            // Kiểm tra nếu tùy chọn đã tồn tại
+                                            if (!Array.from(unitSelect.options).some(opt => opt.value === value && opt.textContent === value)) {
+                                                const option = document.createElement('option');
+                                                option.value = value;
+                                                option.textContent = value;
+                                                option.classList.add('user-added');
+                                                unitSelect.insertBefore(option, unitSelect.options[customPosition]);
+
+                                                // Lưu vào localStorage
+                                                const savedUnits = JSON.parse(localStorage.getItem('savedDonViTinh')) || [];
+                                                if (!savedUnits.includes(value)) {
+                                                    savedUnits.push(value);
+                                                    localStorage.setItem('savedDonViTinh', JSON.stringify(savedUnits));
+                                                }
+                                            }
+
+                                            // Chọn tùy chọn mới
+                                            unitSelect.value = value;
+
+                                            // Ẩn ô input tùy chỉnh
+                                            e.target.classList.add('hidden');
+                                        } catch (error) {
+                                            console.error('Lỗi khi thêm đơn vị tính tùy chỉnh:', error);
+                                        }
+                                    }
+                                });
+                            }
+
+                            this.calculateRowValues(newRow);
+                            importCount++;
+                        } catch (rowError) {
+                            console.error('Lỗi nhập dòng:', rowError, row);
+                            errorCount++;
+                        }
                     });
 
-                    // Create worksheet and workbook
-                    const ws = XLSX.utils.aoa_to_sheet(wsData);
+                    // Update totals and progress
+                    this.updateOrderTotals();
+                    this.updateProgressSteps(2);
 
-                    // Set column widths
-                    const colWidths = [
-                        { wch: 25 }, // Tên hàng hoá
-                        { wch: 15 }, // Đơn vị tính
-                        { wch: 10 }, // Số lượng
-                        { wch: 15 }, // Đơn giá
-                        { wch: 20 }, // Loại hàng hoá
-                        { wch: 25 }, // Mô tả
-                        { wch: 15 }, // Phụ phí điều chỉnh
-                        { wch: 12 }, // Thuế suất (%)
-                        { wch: 15 }, // Phí quản lý (%)
-                        { wch: 15 }, // Tiền hoàn trả
-                        { wch: 25 }, // Ghi chú
-                        { wch: 15 }, // Thành tiền hàng
-                        { wch: 20 }, // Thành tiền sau điều chỉnh
-                        { wch: 15 }, // Tiền thuế
-                        { wch: 15 }  // Tổng giá trị
-                    ];
-                    ws['!cols'] = colWidths;
-
-                    const wb = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(wb, ws, 'Chi tiết hàng hoá');
-
-                    // Generate Excel file
-                    XLSX.writeFile(wb, `DonHang_${maDonHang}.xlsx`);
+                    // Close modal
+                    this.closeImportModal();
 
                     this.hideLoading();
-                    this.closeExportModal();
 
-                    this.showAlert('success', 'Xuất Excel thành công');
+                    // Show result message
+                    let resultMessage = `Đã nhập ${importCount} sản phẩm từ Excel.`;
+                    if (errorCount > 0) {
+                        resultMessage += ` Bỏ qua ${errorCount} dòng không hợp lệ.`;
+                    }
+
+                    this.showAlert('success', 'Nhập dữ liệu thành công', resultMessage);
 
                 } catch (error) {
-                    console.error('Lỗi khi xuất Excel:', error);
                     this.hideLoading();
-                    this.showAlert('error', 'Lỗi xuất Excel', error.message || 'Có lỗi xảy ra khi xuất Excel.');
+                    console.error('Lỗi nhập dữ liệu:', error);
+                    this.showAlert('error', 'Lỗi nhập dữ liệu', error.message || 'Có lỗi xảy ra khi nhập dữ liệu từ Excel.');
                 }
             }
 
@@ -2640,8 +3082,119 @@
     </div>
     `;
             }
+        }
 
+        // Thêm đoạn này ngay sau định nghĩa lớp OrderManager
+        class CustomDropdownManager {
+            constructor(selectId, storageKey) {
+                this.selectId = selectId;           // ID của phần tử select
+                this.storageKey = storageKey;       // Khóa để lưu vào localStorage
+                this.selectElement = document.getElementById(selectId);  // Phần tử select
+                this.customInput = document.getElementById(`${selectId}Custom`); // Input để nhập giá trị tùy chỉnh
+                this.init();
+            }
 
+            init() {
+                // Tải các tùy chọn đã lưu trước đó
+                this.loadSavedOptions();
+
+                // Thiết lập sự kiện listener cho việc thêm tùy chọn mới
+                if (this.customInput) {
+                    // Xử lý khi người dùng rời khỏi ô input
+                    this.customInput.addEventListener('blur', (e) => {
+                        if (e.target.value && this.selectElement.value === 'custom') {
+                            this.addCustomOption(e.target.value);
+                        }
+                    });
+
+                    // Xử lý khi người dùng nhấn phím Enter
+                    this.customInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' && e.target.value && this.selectElement.value === 'custom') {
+                            e.preventDefault();
+                            this.addCustomOption(e.target.value);
+                            this.selectElement.value = e.target.value;
+                            this.customInput.classList.add('hidden');
+                        }
+                    });
+                }
+            }
+
+            // Tải các tùy chọn đã lưu từ localStorage
+            loadSavedOptions() {
+                try {
+                    const savedOptions = JSON.parse(localStorage.getItem(this.storageKey)) || [];
+                    const customOptionPosition = this.getCustomOptionPosition();
+
+                    // Xóa các tùy chọn do người dùng thêm trước đó (trừ tùy chọn "custom")
+                    const options = Array.from(this.selectElement.options);
+                    for (let i = options.length - 1; i >= 0; i--) {
+                        if (options[i].classList.contains('user-added') && options[i].value !== 'custom') {
+                            this.selectElement.remove(i);
+                        }
+                    }
+
+                    // Thêm các tùy chọn đã lưu vào trước tùy chọn "custom"
+                    savedOptions.forEach(option => {
+                        if (!this.optionExists(option)) {
+                            const optElement = document.createElement('option');
+                            optElement.value = option;
+                            optElement.textContent = option;
+                            optElement.classList.add('user-added');
+
+                            this.selectElement.insertBefore(optElement, this.selectElement.options[customOptionPosition]);
+                        }
+                    });
+                } catch (error) {
+                    console.error(`Lỗi khi tải tùy chọn đã lưu cho ${this.selectId}:`, error);
+                }
+            }
+
+            // Tìm vị trí của tùy chọn "custom"
+            getCustomOptionPosition() {
+                for (let i = 0; i < this.selectElement.options.length; i++) {
+                    if (this.selectElement.options[i].value === 'custom') {
+                        return i;
+                    }
+                }
+                return this.selectElement.options.length; // Mặc định là cuối danh sách
+            }
+
+            // Kiểm tra xem tùy chọn đã tồn tại chưa
+            optionExists(value) {
+                return Array.from(this.selectElement.options)
+                    .some(opt => opt.value === value && opt.textContent === value);
+            }
+
+            // Thêm tùy chọn mới
+            addCustomOption(value) {
+                if (!value.trim() || this.optionExists(value)) return;
+
+                try {
+                    // Thêm vào dropdown
+                    const customOptionPosition = this.getCustomOptionPosition();
+                    const optElement = document.createElement('option');
+                    optElement.value = value;
+                    optElement.textContent = value;
+                    optElement.classList.add('user-added');
+
+                    this.selectElement.insertBefore(optElement, this.selectElement.options[customOptionPosition]);
+
+                    // Chọn tùy chọn mới
+                    this.selectElement.value = value;
+
+                    // Lưu vào localStorage
+                    const savedOptions = JSON.parse(localStorage.getItem(this.storageKey)) || [];
+                    if (!savedOptions.includes(value)) {
+                        savedOptions.push(value);
+                        localStorage.setItem(this.storageKey, JSON.stringify(savedOptions));
+                    }
+
+                    // Ẩn ô input tùy chỉnh
+                    this.customInput.classList.add('hidden');
+                } catch (error) {
+                    console.error(`Lỗi khi thêm tùy chọn mới cho ${this.selectId}:`, error);
+                }
+            }
         }
 
         // Khởi tạo quản lý đơn hàng khi DOM đã được tải
