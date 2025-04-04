@@ -543,7 +543,7 @@
         }
 
         // Cập nhật hàm hiển thị sản phẩm để sử dụng dữ liệu từ bảng Hàng hoá
-        function displayProducts(products, tableBody, tableFooter) {
+        function displayProducts(products, tableBody, tableFooter, tax = 0) {
             tableBody.innerHTML = '';
             let subtotal = 0;
 
@@ -583,8 +583,6 @@
                 tableBody.appendChild(row);
             });
 
-            // Tính thuế GTGT 8%
-            const tax = subtotal * 0.08;
             const grandTotal = subtotal + tax;
 
             // Thêm dòng tổng cộng với thuế GTGT
@@ -617,6 +615,7 @@
                 // Lấy ID khách hàng từ đơn hàng
                 const customerId = order['ID khách hàng'];
                 const orderId = order['ID đơn hàng'];
+                const tax = parseFloat(order['Tổng tiền thuế']) || 0;
 
                 if (!customerId) {
                     throw new Error('Không tìm thấy ID khách hàng trong đơn hàng');
@@ -641,7 +640,7 @@
                 const tableBody = document.getElementById('product-table-body');
                 const tableFooter = document.getElementById('table-footer');
 
-                displayProducts(products, tableBody, tableFooter);
+                displayProducts(products, tableBody, tableFooter, tax);
 
             } catch (error) {
                 console.error('Error displaying order data:', error);
