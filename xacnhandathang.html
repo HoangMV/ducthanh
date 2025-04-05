@@ -355,14 +355,10 @@
         </div>
     </div>
 
-
-
     <!-- Thêm vào phần head, sau các script hiện có -->
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
     <script src="https://hoangmv.github.io/ducthanh/key.js"></script>
     <script>
-
-
         // Function to get URL parameters
         function getUrlParameter(name) {
             name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
@@ -430,10 +426,30 @@
             // Viết hoa chữ cái đầu tiên
             words = words.trim();
             return words.charAt(0).toUpperCase() + words.slice(1) + ' đồng';
-
         }
 
-        // Hàm tổng hợp để lấy tất cả dữ liệu trong một thao tác
+        // Get customer data from URL parameters
+        function getCustomerFromURL() {
+            return {
+                'Tên khách hàng đầy đủ': getUrlParameter('customerName') || '',
+                'MST': getUrlParameter('taxCode') || '',
+                'Địa chỉ Hoá đơn': getUrlParameter('invoiceAddress') || '',
+                'SĐT': getUrlParameter('phone') || '',
+                'Địa chỉ trả hàng': getUrlParameter('deliveryAddress') || ''
+            };
+        }
+
+        // Get order data from URL parameters
+        function getOrderFromURL() {
+            return {
+                'ID đơn hàng': getUrlParameter('id') || '',
+                'Mã đơn hàng': getUrlParameter('orderCode') || '',
+                'Ngày đặt hàng': getUrlParameter('orderDate') || '',
+                'Tổng tiền thuế': parseFloat(getUrlParameter('tax')) || 0
+            };
+        }
+
+        // Modified fetchAllData to prioritize URL parameters
         async function fetchAllData(orderId) {
             const loadingElement = document.getElementById('loading');
             const errorElement = document.getElementById('error-message');
@@ -454,43 +470,59 @@
                 console.log("Fetching data with order ID:", orderId);
                 console.log("API settings:", { region, appId });
 
-                // Lấy customerId từ URL nếu có
+                // Check for customer and order data in URL first
+                const customerFromURL = getCustomerFromURL();
+                const orderFromURL = getOrderFromURL();
+
+                // Check if we have complete customer data from URL
+                const hasCustomerFromURL = customerFromURL['Tên khách hàng đầy đủ'] !== '';
+
+                // Check if we have complete order data from URL except for products
+                const hasOrderFromURL = orderFromURL['Mã đơn hàng'] !== '';
+
+                // Always need to fetch products
+                const productsPromise = fetch(`https://${region}.appsheet.com/api/v2/apps/${appId}/tables/Hàng hoá/Action`, {
+                    method: 'POST',
+                    headers: {
+                        'ApplicationAccessKey': accessKey,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        Action: 'Find',
+                        Properties: {
+                            Selector: `Filter(Hàng hoá, [ID đơn hàng] = "${orderId}")`
+                        }
+                    })
+                });
+
+                // Prepare array of promises
+                const promises = [productsPromise];
+
+                // Only fetch order data if not provided in URL
+                if (!hasOrderFromURL) {
+                    promises.push(
+                        fetch(`https://${region}.appsheet.com/api/v2/apps/${appId}/tables/Đơn hàng/Action`, {
+                            method: 'POST',
+                            headers: {
+                                'ApplicationAccessKey': accessKey,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                Action: 'Find',
+                                Properties: {
+                                    Selector: `Filter(Đơn hàng, [ID đơn hàng] = "${orderId}")`
+                                }
+                            })
+                        })
+                    );
+                }
+
+                // Get customerId if available and customer data not provided in URL
                 const customerId = getUrlParameter('customerId');
                 console.log("Customer ID from URL:", customerId);
 
-                // Chuẩn bị mảng promises để fetch dữ liệu
-                const promises = [
-                    // Luôn fetch order và products
-                    fetch(`https://${region}.appsheet.com/api/v2/apps/${appId}/tables/Đơn hàng/Action`, {
-                        method: 'POST',
-                        headers: {
-                            'ApplicationAccessKey': accessKey,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            Action: 'Find',
-                            Properties: {
-                                Selector: `Filter(Đơn hàng, [ID đơn hàng] = "${orderId}")`
-                            }
-                        })
-                    }),
-                    fetch(`https://${region}.appsheet.com/api/v2/apps/${appId}/tables/Hàng hoá/Action`, {
-                        method: 'POST',
-                        headers: {
-                            'ApplicationAccessKey': accessKey,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            Action: 'Find',
-                            Properties: {
-                                Selector: `Filter(Hàng hoá, [ID đơn hàng] = "${orderId}")`
-                            }
-                        })
-                    })
-                ];
-
-                // Nếu có customerId từ URL, thêm promise fetch customer luôn
-                if (customerId) {
+                // Only fetch customer data if not provided in URL and we have a customerId
+                if (!hasCustomerFromURL && customerId) {
                     promises.push(
                         fetch(`https://${region}.appsheet.com/api/v2/apps/${appId}/tables/Khách hàng/Action`, {
                             method: 'POST',
@@ -508,10 +540,10 @@
                     );
                 }
 
-                // Thực hiện tất cả promises cùng lúc
+                // Execute all promises simultaneously
                 const responses = await Promise.all(promises);
 
-                // Kiểm tra responses
+                // Check responses
                 responses.forEach((response, index) => {
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status} - Error fetching data (request ${index + 1})`);
@@ -521,45 +553,54 @@
                 // Parse responses
                 const responseData = await Promise.all(responses.map(response => response.json()));
 
-                // Lấy dữ liệu
-                const orderData = responseData[0];
-                const productsData = responseData[1];
-                // customerData sẽ là undefined nếu không có customerId từ URL
-                const customerData = customerId ? responseData[2] : undefined;
-
-                console.log("Order data received:", orderData);
-                console.log("Products data received:", productsData);
-                if (customerData) console.log("Customer data received:", customerData);
-
-                if (!Array.isArray(orderData) || orderData.length === 0) {
-                    throw new Error(`Không tìm thấy đơn hàng với mã: ${orderId}`);
-                }
-
-                const order = orderData.find(o => o['ID đơn hàng'] === orderId);
-                if (!order) {
-                    throw new Error(`Không tìm thấy đơn hàng với mã: ${orderId}`);
-                }
-
-                // Prepare default customer information
-                let customer = {
-                    'Tên khách hàng đầy đủ': 'Khách hàng không xác định',
-                    'MST': '',
-                    'Địa chỉ Hoá đơn': '',
-                    'SĐT': '',
-                    'Địa chỉ trả hàng': ''
-                };
-
-                // Xử lý dữ liệu khách hàng
-                if (customerData && Array.isArray(customerData) && customerData.length > 0) {
-                    // Nếu đã có customerData từ fetch cùng lúc (từ URL)
-                    const foundCustomer = customerData.find(c => c['ID khách hàng'] === customerId);
-                    if (foundCustomer) {
-                        customer = foundCustomer;
-                    } else {
-                        console.warn(`Không tìm thấy khách hàng với ID: ${customerId} trong dữ liệu trả về`);
+                // Get data
+                const productsData = responseData[0];
+                // Order data - either from URL or from API response
+                let order;
+                if (hasOrderFromURL) {
+                    order = orderFromURL;
+                } else {
+                    const orderData = responseData[1];
+                    if (!Array.isArray(orderData) || orderData.length === 0) {
+                        throw new Error(`Không tìm thấy đơn hàng với mã: ${orderId}`);
                     }
-                } else if (!customerId) {
-                    // Nếu không có customerId từ URL, thử lấy từ order
+                    order = orderData.find(o => o['ID đơn hàng'] === orderId);
+                    if (!order) {
+                        throw new Error(`Không tìm thấy đơn hàng với mã: ${orderId}`);
+                    }
+                }
+
+                // Customer data - either from URL, from API response, or default
+                let customer;
+                if (hasCustomerFromURL) {
+                    customer = customerFromURL;
+                } else if (!hasCustomerFromURL && customerId) {
+                    const customerData = responseData[promises.length - 1]; // Last response is customer data
+                    if (Array.isArray(customerData) && customerData.length > 0) {
+                        const foundCustomer = customerData.find(c => c['ID khách hàng'] === customerId);
+                        if (foundCustomer) {
+                            customer = foundCustomer;
+                        } else {
+                            console.warn(`Không tìm thấy khách hàng với ID: ${customerId} trong dữ liệu trả về`);
+                            customer = {
+                                'Tên khách hàng đầy đủ': 'Khách hàng không xác định',
+                                'MST': '',
+                                'Địa chỉ Hoá đơn': '',
+                                'SĐT': '',
+                                'Địa chỉ trả hàng': ''
+                            };
+                        }
+                    } else {
+                        customer = {
+                            'Tên khách hàng đầy đủ': 'Khách hàng không xác định',
+                            'MST': '',
+                            'Địa chỉ Hoá đơn': '',
+                            'SĐT': '',
+                            'Địa chỉ trả hàng': ''
+                        };
+                    }
+                } else {
+                    // If no customer data from URL and no customerId, try to get from order
                     const orderCustomerId = order['ID khách hàng'];
                     console.log("Customer ID from order:", orderCustomerId);
 
@@ -587,15 +628,52 @@
                                     const foundCustomer = customerData.find(c => c['ID khách hàng'] === orderCustomerId);
                                     if (foundCustomer) {
                                         customer = foundCustomer;
+                                    } else {
+                                        customer = {
+                                            'Tên khách hàng đầy đủ': 'Khách hàng không xác định',
+                                            'MST': '',
+                                            'Địa chỉ Hoá đơn': '',
+                                            'SĐT': '',
+                                            'Địa chỉ trả hàng': ''
+                                        };
                                     }
+                                } else {
+                                    customer = {
+                                        'Tên khách hàng đầy đủ': 'Khách hàng không xác định',
+                                        'MST': '',
+                                        'Địa chỉ Hoá đơn': '',
+                                        'SĐT': '',
+                                        'Địa chỉ trả hàng': ''
+                                    };
                                 }
                             } else {
                                 console.warn(`Lỗi khi tải dữ liệu khách hàng: ${customerResponse.status}`);
+                                customer = {
+                                    'Tên khách hàng đầy đủ': 'Khách hàng không xác định',
+                                    'MST': '',
+                                    'Địa chỉ Hoá đơn': '',
+                                    'SĐT': '',
+                                    'Địa chỉ trả hàng': ''
+                                };
                             }
                         } catch (customerError) {
                             console.warn('Lỗi khi tải dữ liệu khách hàng từ order:', customerError);
-                            // Không throw error ở đây để không làm gián đoạn luồng chính
+                            customer = {
+                                'Tên khách hàng đầy đủ': 'Khách hàng không xác định',
+                                'MST': '',
+                                'Địa chỉ Hoá đơn': '',
+                                'SĐT': '',
+                                'Địa chỉ trả hàng': ''
+                            };
                         }
+                    } else {
+                        customer = {
+                            'Tên khách hàng đầy đủ': 'Khách hàng không xác định',
+                            'MST': '',
+                            'Địa chỉ Hoá đơn': '',
+                            'SĐT': '',
+                            'Địa chỉ trả hàng': ''
+                        };
                     }
                 }
 
@@ -630,10 +708,10 @@
 
             if (!products || products.length === 0) {
                 tableBody.innerHTML = `
-            <tr>
-                <td colspan="6" style="text-align: center;">Không có dữ liệu sản phẩm</td>
-            </tr>
-        `;
+                    <tr>
+                        <td colspan="6" style="text-align: center;">Không có dữ liệu sản phẩm</td>
+                    </tr>
+                `;
                 if (tableFooter) {
                     tableFooter.innerHTML = '';
                 }
@@ -648,18 +726,18 @@
 
                 const row = document.createElement('tr');
                 row.innerHTML = `
-            <td>${index + 1}</td>
-            <td>
-                <div class="product-info">
-                    <strong>${item['Tên hàng hoá'] || ''}</strong>
-                    <span class="product-description">${item['Mô tả'] || ''}</span>
-                </div>
-            </td>
-            <td>${item['Đơn vị tính'] || 'Cái'}</td>
-            <td style="text-align: right;">${formatCurrency(quantity)}</td>
-            <td style="text-align: right;">${formatCurrency(unitPrice)}</td>
-            <td style="text-align: right;">${formatCurrency(total)}</td>
-        `;
+                    <td>${index + 1}</td>
+                    <td>
+                        <div class="product-info">
+                            <strong>${item['Tên hàng hoá'] || ''}</strong>
+                            <span class="product-description">${item['Mô tả'] || ''}</span>
+                        </div>
+                    </td>
+                    <td>${item['Đơn vị tính'] || 'Cái'}</td>
+                    <td style="text-align: right;">${formatCurrency(quantity)}</td>
+                    <td style="text-align: right;">${formatCurrency(unitPrice)}</td>
+                    <td style="text-align: right;">${formatCurrency(total)}</td>
+                `;
 
                 tableBody.appendChild(row);
             });
@@ -673,7 +751,7 @@
                     <tr>
                         <td colspan="5" style="text-align: center; font-weight: bold;">Cộng tiền hàng</td>
                         <td style="text-align: right;">${formatCurrency(subtotal)}</td>
-                    </tr>
+                        </tr>
                     <tr>
                         <td colspan="5" style="text-align: center; font-weight: bold;">Thuế GTGT (8%)</td>
                         <td style="text-align: right;">${formatCurrency(tax)}</td>
