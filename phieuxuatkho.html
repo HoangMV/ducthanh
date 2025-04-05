@@ -364,9 +364,8 @@
     <!-- Thêm vào phần head, sau các script hiện có -->
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
     <script src="https://hoangmv.github.io/ducthanh/key.js"></script>
+
     <script>
-
-
         // Function to get URL parameters
         function getUrlParameter(name) {
             name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
@@ -436,11 +435,11 @@
             // Viết hoa chữ cái đầu tiên
             words = words.trim();
             return words.charAt(0).toUpperCase() + words.slice(1) + ' đồng';
-
         }
 
-        // Function to fetch specific order by ID from AppSheet
-        async function fetchOrderById(orderId) {
+        // Consolidated function to fetch all data in one operation
+        // Hàm lấy dữ liệu từ API
+        async function fetchAllData(orderId) {
             const loadingElement = document.getElementById('loading');
             const errorElement = document.getElementById('error-message');
 
@@ -448,126 +447,188 @@
             errorElement.style.display = 'none';
 
             try {
-                const response = await fetch(`https://${region}.appsheet.com/api/v2/apps/${appId}/tables/Đơn hàng/Action`, {
-                    method: 'POST',
-                    headers: {
-                        'ApplicationAccessKey': accessKey,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        Action: 'Find',
-                        Properties: {
-                            Selector: `Filter(Đơn hàng, [ID đơn hàng] = "${orderId}")`
+                // Nếu không có orderId được truyền vào, lấy từ URL
+                if (!orderId) {
+                    orderId = getUrlParameter('id');
+                    console.log("Getting order ID from URL:", orderId);
+                    if (!orderId) {
+                        throw new Error('Không tìm thấy mã đơn hàng trong URL');
+                    }
+                }
+
+                console.log("Fetching data with order ID:", orderId);
+                console.log("API settings:", { region, appId });
+
+                // Lấy customerId từ URL nếu có
+                const customerId = getUrlParameter('customerId');
+                console.log("Customer ID from URL:", customerId);
+
+                // Chuẩn bị mảng promises để fetch dữ liệu
+                const promises = [
+                    // Luôn fetch order và products
+                    fetch(`https://${region}.appsheet.com/api/v2/apps/${appId}/tables/Đơn hàng/Action`, {
+                        method: 'POST',
+                        headers: {
+                            'ApplicationAccessKey': accessKey,
+                            'Content-Type': 'application/json'
                         },
+                        body: JSON.stringify({
+                            Action: 'Find',
+                            Properties: {
+                                Selector: `Filter(Đơn hàng, [ID đơn hàng] = "${orderId}")`
+                            }
+                        })
+                    }),
+                    fetch(`https://${region}.appsheet.com/api/v2/apps/${appId}/tables/Hàng hoá/Action`, {
+                        method: 'POST',
+                        headers: {
+                            'ApplicationAccessKey': accessKey,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            Action: 'Find',
+                            Properties: {
+                                Selector: `Filter(Hàng hoá, [ID đơn hàng] = "${orderId}")`
+                            }
+                        })
                     })
+                ];
+
+                // Nếu có customerId từ URL, thêm promise fetch customer luôn
+                if (customerId) {
+                    promises.push(
+                        fetch(`https://${region}.appsheet.com/api/v2/apps/${appId}/tables/Khách hàng/Action`, {
+                            method: 'POST',
+                            headers: {
+                                'ApplicationAccessKey': accessKey,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                Action: 'Find',
+                                Properties: {
+                                    Selector: `Filter(Khách hàng, [ID khách hàng] = "${customerId}")`
+                                }
+                            })
+                        })
+                    );
+                }
+
+                // Thực hiện tất cả promises cùng lúc
+                const responses = await Promise.all(promises);
+
+                // Kiểm tra responses
+                responses.forEach((response, index) => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status} - Error fetching data (request ${index + 1})`);
+                    }
                 });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                // Parse responses
+                const responseData = await Promise.all(responses.map(response => response.json()));
 
-                const data = await response.json();
-                loadingElement.style.display = 'none';
+                // Lấy dữ liệu
+                const orderData = responseData[0];
+                const productsData = responseData[1];
+                // customerData sẽ là undefined nếu không có customerId từ URL
+                const customerData = customerId ? responseData[2] : undefined;
 
-                if (!Array.isArray(data)) {
-                    throw new Error('Invalid data format received');
-                }
+                console.log("Order data received:", orderData);
+                console.log("Products data received:", productsData);
+                if (customerData) console.log("Customer data received:", customerData);
 
-                // Tìm đơn hàng có ID chính xác
-                const exactOrder = data.find(order => order['ID đơn hàng'] === orderId);
-
-                if (!exactOrder) {
+                if (!Array.isArray(orderData) || orderData.length === 0) {
                     throw new Error(`Không tìm thấy đơn hàng với mã: ${orderId}`);
                 }
 
-                return exactOrder; // Trả về đơn hàng chính xác
+                const order = orderData.find(o => o['ID đơn hàng'] === orderId);
+                if (!order) {
+                    throw new Error(`Không tìm thấy đơn hàng với mã: ${orderId}`);
+                }
+
+                // Prepare default customer information
+                let customer = {
+                    'Tên khách hàng đầy đủ': 'Khách hàng không xác định',
+                    'MST': '',
+                    'Địa chỉ Hoá đơn': '',
+                    'SĐT': '',
+                    'Địa chỉ trả hàng': ''
+                };
+
+                // Xử lý dữ liệu khách hàng
+                if (customerData && Array.isArray(customerData) && customerData.length > 0) {
+                    // Nếu đã có customerData từ fetch cùng lúc (từ URL)
+                    const foundCustomer = customerData.find(c => c['ID khách hàng'] === customerId);
+                    if (foundCustomer) {
+                        customer = foundCustomer;
+                    } else {
+                        console.warn(`Không tìm thấy khách hàng với ID: ${customerId} trong dữ liệu trả về`);
+                    }
+                } else if (!customerId) {
+                    // Nếu không có customerId từ URL, thử lấy từ order
+                    const orderCustomerId = order['ID khách hàng'];
+                    console.log("Customer ID from order:", orderCustomerId);
+
+                    if (orderCustomerId) {
+                        try {
+                            const customerResponse = await fetch(`https://${region}.appsheet.com/api/v2/apps/${appId}/tables/Khách hàng/Action`, {
+                                method: 'POST',
+                                headers: {
+                                    'ApplicationAccessKey': accessKey,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    Action: 'Find',
+                                    Properties: {
+                                        Selector: `Filter(Khách hàng, [ID khách hàng] = "${orderCustomerId}")`
+                                    }
+                                })
+                            });
+
+                            if (customerResponse.ok) {
+                                const customerData = await customerResponse.json();
+                                console.log("Customer data received from order:", customerData);
+
+                                if (Array.isArray(customerData) && customerData.length > 0) {
+                                    const foundCustomer = customerData.find(c => c['ID khách hàng'] === orderCustomerId);
+                                    if (foundCustomer) {
+                                        customer = foundCustomer;
+                                    }
+                                }
+                            } else {
+                                console.warn(`Lỗi khi tải dữ liệu khách hàng: ${customerResponse.status}`);
+                            }
+                        } catch (customerError) {
+                            console.warn('Lỗi khi tải dữ liệu khách hàng từ order:', customerError);
+                            // Không throw error ở đây để không làm gián đoạn luồng chính
+                        }
+                    }
+                }
+
+                // Filter products to ensure we only get products for this order
+                const products = Array.isArray(productsData) ?
+                    productsData.filter(p => p['ID đơn hàng'] === orderId) :
+                    [];
+
+                if (products.length === 0) {
+                    console.warn(`Không tìm thấy sản phẩm nào cho đơn hàng: ${orderId}`);
+                    // Vẫn tiếp tục, không throw error
+                }
+
+                return {
+                    order,
+                    customer,
+                    products
+                };
             } catch (error) {
-                console.error('Failed to fetch order data:', error);
+                console.error('Failed to fetch data:', error);
                 loadingElement.style.display = 'none';
-                errorElement.textContent = error.message || 'Có lỗi xảy ra khi tải dữ liệu đơn hàng.';
+                errorElement.textContent = error.message || 'Có lỗi xảy ra khi tải dữ liệu.';
                 errorElement.style.display = 'block';
                 throw error;
             }
         }
 
-        // Thêm hàm mới để lấy thông tin khách hàng theo ID
-        async function fetchCustomerById(customerId) {
-            try {
-                const response = await fetch(`https://${region}.appsheet.com/api/v2/apps/${appId}/tables/Khách hàng/Action`, {
-                    method: 'POST',
-                    headers: {
-                        'ApplicationAccessKey': accessKey,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        Action: 'Find',
-                        Properties: {
-                            Selector: `Filter(Khách hàng, [ID khách hàng] = "${customerId}")`
-                        },
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-
-                if (!Array.isArray(data)) {
-                    throw new Error('Invalid data format received');
-                }
-
-                // Tìm khách hàng có ID chính xác
-                const exactCustomer = data.find(customer => customer['ID khách hàng'] === customerId);
-
-                if (!exactCustomer) {
-                    throw new Error(`Không tìm thấy khách hàng với ID: ${customerId}`);
-                }
-
-                return exactCustomer; // Trả về khách hàng chính xác
-            } catch (error) {
-                console.error('Failed to fetch customer data:', error);
-                throw error;
-            }
-        }
-
-        // Thêm hàm mới để lấy hàng hóa theo ID đơn hàng
-        async function fetchProductsByOrderId(orderId) {
-            try {
-                const response = await fetch(`https://${region}.appsheet.com/api/v2/apps/${appId}/tables/Hàng hoá/Action`, {
-                    method: 'POST',
-                    headers: {
-                        'ApplicationAccessKey': accessKey,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        Action: 'Find',
-                        Properties: {},
-                        Selector: `Filter([Hàng hoá], [ID đơn hàng] = "${orderId}")`
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-
-                if (!Array.isArray(data)) {
-                    throw new Error('Invalid data format received');
-                }
-
-                // Lọc lại để đảm bảo chỉ lấy hàng hóa thuộc đơn hàng này
-                const orderProducts = data.filter(product => product['ID đơn hàng'] === orderId);
-
-                return orderProducts;
-            } catch (error) {
-                console.error('Failed to fetch product data:', error);
-                throw error;
-            }
-        }
-
-        // Cập nhật hàm hiển thị sản phẩm để sử dụng dữ liệu từ bảng Hàng hoá
+        // Function to display products in the table
         function displayProducts(products, tableBody, tableFooter, order, tax) {
             tableBody.innerHTML = '';
             let subtotal = 0;
@@ -613,28 +674,27 @@
             // Thêm dòng tổng cộng với thuế GTGT
             if (tableFooter) {
                 tableFooter.innerHTML = `
-                    <tr>
-                        <td colspan="5" style="text-align: center; font-weight: bold;">Cộng tiền hàng</td>
-                        <td style="text-align: right;">${formatCurrency(subtotal)}</td>
-                    </tr>
-                    <tr>
-                        <td colspan="5" style="text-align: center; font-weight: bold;">Thuế GTGT (8%)</td>
-                        <td style="text-align: right;">${formatCurrency(tax)}</td>
-                    </tr>
-                    <tr>
-                        <td colspan="5" style="text-align: center; font-weight: bold;">Tổng tiền thanh toán</td>
-                        <td style="text-align: right;">${formatCurrency(grandTotal)}</td>
-                    </tr>
-                    <tr>
-                        <td colspan="5" style="text-align: center; font-weight: bold;">Tạm ứng</td>
-                        <td style="text-align: right;">${formatCurrency(order['Số tiền đã thu'] || 0)}</td>
-                    </tr>
-                    <tr class="total-row">
-                        <td colspan="5" style="text-align: center; font-weight: bold;">Còn lại</td>
-                        <td style="text-align: right;">${formatCurrency(order['Số tiền còn phải thu'] || 0)}</td>
-                    </tr>
-                    
-                `;
+            <tr>
+                <td colspan="5" style="text-align: center; font-weight: bold;">Cộng tiền hàng</td>
+                <td style="text-align: right;">${formatCurrency(subtotal)}</td>
+            </tr>
+            <tr>
+                <td colspan="5" style="text-align: center; font-weight: bold;">Thuế GTGT (8%)</td>
+                <td style="text-align: right;">${formatCurrency(tax)}</td>
+            </tr>
+            <tr>
+                <td colspan="5" style="text-align: center; font-weight: bold;">Tổng tiền thanh toán</td>
+                <td style="text-align: right;">${formatCurrency(grandTotal)}</td>
+            </tr>
+            <tr>
+                <td colspan="5" style="text-align: center; font-weight: bold;">Tạm ứng</td>
+                <td style="text-align: right;">${formatCurrency(order['Số tiền đã thu'] || 0)}</td>
+            </tr>
+            <tr class="total-row">
+                <td colspan="5" style="text-align: center; font-weight: bold;">Còn lại</td>
+                <td style="text-align: right;">${formatCurrency(order['Số tiền còn phải thu'] || 0)}</td>
+            </tr>
+        `;
             }
 
             // Update to use remaining amount for total in words
@@ -644,23 +704,11 @@
             return grandTotal;
         }
 
-        // Cập nhật hàm displayOrderData để hiển thị xác nhận đặt hàng
-        async function displayOrderData(order) {
+        // Updated function to display all order data
+        function displayOrderData(data) {
             try {
-                // Lấy ID khách hàng từ đơn hàng
-                const customerId = order['ID khách hàng'];
-                const orderId = order['ID đơn hàng'];
+                const { order, customer, products } = data;
                 const tax = parseFloat(order['Tổng tiền thuế']) || 0;
-
-                if (!customerId) {
-                    throw new Error('Không tìm thấy ID khách hàng trong đơn hàng');
-                }
-
-                // Truy vấn thông tin khách hàng từ bảng Khách hàng
-                const customer = await fetchCustomerById(customerId);
-
-                // Truy vấn hàng hóa từ bảng Hàng hoá theo ID đơn hàng
-                const products = await fetchProductsByOrderId(orderId);
 
                 // Cập nhật thông tin đơn hàng
                 document.getElementById('order-number').textContent = order['Mã đơn hàng'] || '';
@@ -676,7 +724,7 @@
                 document.getElementById('recipient-phone').textContent = customer['SĐT'] || '';
                 document.getElementById('delivery-address').textContent = customer['Địa chỉ trả hàng'] || '';
 
-                // Hiển thị danh sách sản phẩm từ bảng Hàng hoá
+                // Hiển thị danh sách sản phẩm
                 const tableBody = document.getElementById('product-table-body');
                 const tableFooter = document.getElementById('table-footer');
 
@@ -689,6 +737,7 @@
             }
         }
 
+        // Export to Word function
         async function exportToWordTemplate() {
             try {
                 // Verify order data exists
@@ -805,38 +854,7 @@
             }
         }
 
-
-        // Thêm khai báo biến ở phạm vi toàn cục (bên ngoài các hàm)
-        let order;
-
-        // Sửa hàm initializePage để lưu order vào biến toàn cục
-        async function initializePage() {
-            // Lấy order ID từ tham số URL
-            const orderId = getUrlParameter('id');
-
-            if (!orderId) {
-                document.getElementById('error-message').textContent = 'Không tìm thấy mã đơn hàng trong URL. Vui lòng kiểm tra lại đường dẫn.';
-                document.getElementById('error-message').style.display = 'block';
-                document.getElementById('loading').style.display = 'none';
-                return;
-            }
-
-            try {
-                // Lấy đơn hàng theo ID và lưu vào biến toàn cục
-                order = await fetchOrderById(orderId);
-
-                console.log('Order data loaded:', order);
-                await displayOrderData(order);
-            } catch (error) {
-                console.error('Failed to initialize page:', error);
-                document.getElementById('error-message').textContent = 'Không thể tải dữ liệu đơn hàng. Vui lòng thử lại sau.';
-                document.getElementById('error-message').style.display = 'block';
-            } finally {
-                document.getElementById('loading').style.display = 'none';
-            }
-        }
-
-
+        // Export to Excel function
         async function exportToExcelWithExcelJS() {
             try {
                 document.getElementById('loading').style.display = 'block';
@@ -1202,6 +1220,41 @@
             } catch (error) {
                 console.error('Error exporting to Excel:', error);
                 alert('Có lỗi khi xuất file Excel: ' + error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // Global variable to store order data
+        let order;
+
+        // Initialize page on load - the main function to start everything
+        async function initializePage() {
+            // Lấy order ID từ tham số URL
+            const orderId = getUrlParameter('id');
+
+            if (!orderId) {
+                document.getElementById('error-message').textContent = 'Không tìm thấy mã đơn hàng trong URL. Vui lòng kiểm tra lại đường dẫn.';
+                document.getElementById('error-message').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+                return;
+            }
+
+            try {
+                // Fetch all data in one consolidated operation
+                const allData = await fetchAllData(orderId);
+
+                // Store order in global variable for later use in exports
+                order = allData.order;
+
+                console.log('All data loaded:', allData);
+
+                // Display data on the page
+                displayOrderData(allData);
+            } catch (error) {
+                console.error('Failed to initialize page:', error);
+                document.getElementById('error-message').textContent = 'Không thể tải dữ liệu đơn hàng. Vui lòng thử lại sau.';
+                document.getElementById('error-message').style.display = 'block';
             } finally {
                 document.getElementById('loading').style.display = 'none';
             }
