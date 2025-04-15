@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 
@@ -442,7 +443,7 @@
                 const totalValue = parseFloat(order['Tổng giá trị đơn'] || 0);
 
                 // Tính 50% tạm ứng
-                const advanceAmount = totalValue * 0.5;
+                const advanceAmount = parseFloat(order['Số tiền còn phải thu'] || 0);
 
                 return {
                     customerId: order['ID khách hàng'],
