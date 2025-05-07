@@ -1,0 +1,1820 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảng kê công nợ phải trả</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" type="text/css"
+        href="https://cdn.jsdelivr.net/gh/lelinh014756/fui-toast-js@master/assets/css/toast@1.0.1/fuiToast.min.css">
+    <script type="text/javascript"
+        src="https://cdn.jsdelivr.net/gh/lelinh014756/fui-toast-js@master/assets/js/toast@1.0.1/fuiToast.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-in-out',
+                        'slide-up': 'slideUp 0.4s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(10px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                    },
+                },
+            },
+        }
+    </script>
+
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        /* Choices.js Customization */
+        .choices__list--multiple .choices__item {
+            background-color: #0ea5e9;
+            border: 1px solid #0ea5e9;
+        }
+
+        .choices__list--multiple .choices__item.is-highlighted {
+            background-color: #0284c7;
+            border: 1px solid #0284c7;
+        }
+
+        .choices__inner {
+            min-height: 44px;
+            background-color: #fff;
+            border-radius: 0.375rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .is-focused .choices__inner,
+        .is-open .choices__inner {
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+        }
+
+        .choices__input {
+            background-color: transparent;
+        }
+
+        /* Card hover effect */
+        .hover-card {
+            transition: all 0.3s ease;
+        }
+
+        .hover-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Table styles */
+        .table-container {
+            overflow-x: auto;
+            scrollbar-width: thin;
+        }
+
+        .data-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+        }
+
+        .data-table th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .data-table th:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 20;
+        }
+
+        .data-table td:first-child {
+            position: sticky;
+            left: 0;
+            background-color: #f8fafc;
+            z-index: 5;
+        }
+
+        /* Input focus */
+        .custom-input:focus {
+            outline: none;
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+        }
+
+        .animate-fade-out {
+            animation: fadeOut 0.3s ease-out;
+            opacity: 0;
+        }
+
+        #loadingOverlay {
+            z-index: 9999;
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+    <div id="fui-toast"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay"
+        class="fixed inset-0 bg-gray-800/70 backdrop-blur-sm z-50 flex justify-center items-center hidden transition-opacity duration-300">
+        <div class="bg-white p-6 rounded-xl shadow-2xl flex flex-col items-center animate-slide-up">
+            <div class="animate-spin text-primary-600 mb-4">
+                <i class="fas fa-circle-notch text-5xl"></i>
+            </div>
+            <p class="text-gray-700 font-medium text-lg" id="loadingText">Đang xử lý...</p>
+        </div>
+    </div>
+
+    <!-- Page Container -->
+    <div class="mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="mb-8">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="bg-primary-600 text-white p-3 rounded-lg shadow-lg">
+                        <i class="fas fa-file-invoice-dollar text-xl"></i>
+                    </div>
+                    <h1 class="text-3xl font-bold text-gray-800">Bảng kê công nợ phải trả</h1>
+                </div>
+            </div>
+
+            <!-- Progress Steps -->
+            <div class="mt-8 mb-4">
+                <div class="flex items-center justify-between w-full max-w-4xl mx-auto">
+                    <div class="flex flex-col items-center">
+                        <div class="w-10 h-10 bg-primary-600 text-white flex items-center justify-center rounded-full">
+                            <i class="fas fa-edit"></i>
+                        </div>
+                        <span class="mt-2 text-sm font-medium text-gray-700">Khai báo</span>
+                    </div>
+                    <div class="flex-1 h-1 bg-gray-200 mx-2">
+                        <div class="h-1 bg-primary-500" style="width: 0%;" id="progress1"></div>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="w-10 h-10 bg-gray-300 text-gray-600 flex items-center justify-center rounded-full"
+                            id="step2">
+                            <i class="fas fa-table"></i>
+                        </div>
+                        <span class="mt-2 text-sm font-medium text-gray-500">Chi phí</span>
+                    </div>
+                    <div class="flex-1 h-1 bg-gray-200 mx-2">
+                        <div class="h-1 bg-primary-500" style="width: 0%;" id="progress2"></div>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="w-10 h-10 bg-gray-300 text-gray-600 flex items-center justify-center rounded-full"
+                            id="step3">
+                            <i class="fas fa-save"></i>
+                        </div>
+                        <span class="mt-2 text-sm font-medium text-gray-500">Lưu trữ</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main>
+            <!-- Form nhập liệu thông tin bảng kê công nợ phải trả -->
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8 hover-card animate-fade-in">
+                <div class="flex items-center border-b border-gray-200 pb-4 mb-5">
+                    <div class="bg-primary-100 text-primary-700 p-2 rounded-lg mr-3">
+                        <i class="fas fa-file-invoice text-xl"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-800">Thông tin bảng kê công nợ</h2>
+                </div>
+
+                <form id="bangKeForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Mã bảng kê công nợ phải
+                            trả</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <i class="fas fa-barcode text-gray-400"></i>
+                            </div>
+                            <input type="text" id="maBangKe"
+                                class="custom-input w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm bg-white">
+                        </div>
+                    </div>
+
+                    <!-- Nhà cung cấp -->
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Nhà cung cấp <span
+                                class="text-red-500">*</span></label>
+                        <div class="flex gap-2">
+                            <div class="relative flex-1">
+                                <select id="nhaCungCap" class="choices-select" required>
+                                    <option value="">-- Chọn nhà cung cấp --</option>
+                                </select>
+                            </div>
+                            <button type="button" id="btnThemNhaCungCap"
+                                class="px-3 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Trạng thái duyệt</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <i class="fas fa-check-circle text-gray-400"></i>
+                            </div>
+                            <select id="trangThaiDuyet"
+                                class="custom-input w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm bg-white appearance-none">
+                                <option value="Chưa duyệt">Chưa duyệt</option>
+                                <option value="Đã duyệt">Đã duyệt</option>
+                            </select>
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <i class="fas fa-chevron-down text-gray-400"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Người duyệt</label>
+                        <div class="flex gap-2">
+                            <div class="relative flex-1">
+                                <select id="nguoiDuyet" class="choices-select">
+                                    <option value="">-- Chọn người duyệt --</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Ngày chi</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <i class="fas fa-calendar-alt text-gray-400"></i>
+                            </div>
+                            <input type="date" id="ngayChi"
+                                class="custom-input w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm bg-white">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Người chi</label>
+                        <div class="flex gap-2">
+                            <div class="relative flex-1">
+                                <select id="nguoiChi" class="choices-select">
+                                    <option value="">-- Chọn người chi --</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Ngày tạo <span
+                                class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <i class="fas fa-calendar-check text-gray-400"></i>
+                            </div>
+                            <input type="date" id="ngayTao"
+                                class="custom-input w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm bg-white"
+                                required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Tổng chi phí</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <i class="fas fa-money-bill-wave text-gray-400"></i>
+                            </div>
+                            <input type="text" id="tongChiPhi"
+                                class="custom-input w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm bg-white"
+                                readonly>
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <span class="text-gray-500 text-sm">VNĐ</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-4 flex justify-end mt-4 space-x-3">
+                        <button type="button" id="resetFormBtn"
+                            class="px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-200 flex items-center">
+                            <i class="fas fa-redo-alt mr-2"></i> Làm mới
+                        </button>
+                        <button type="button" id="btnTaoChiTiet"
+                            class="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-600 text-white rounded-lg hover:from-amber-600 hover:to-yellow-700 shadow-md hover:shadow-lg transition duration-200 flex items-center">
+                            <i class="fas fa-table mr-2"></i> Tạo chi phí
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Bảng chi tiết chi phí sản xuất -->
+            <div id="chiTietSection" class="bg-white p-6 rounded-xl shadow-md mb-8 hidden animate-fade-in">
+                <div class="flex items-center border-b border-gray-200 pb-4 mb-5">
+                    <div class="bg-primary-100 text-primary-700 p-2 rounded-lg mr-3">
+                        <i class="fas fa-table-list text-xl"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-800">Chi tiết chi phí sản xuất</h2>
+                </div>
+
+                <div class="table-container rounded-lg border border-gray-200 mb-5">
+                    <table id="chiTietTable" class="data-table min-w-full bg-white">
+                        <thead id="chiTietTableHead">
+                            <tr>
+                                <th
+                                    class="py-3 px-4 border-b border-gray-300 bg-gradient-to-r from-blue-50 to-blue-100 font-medium text-gray-700 sticky top-0 w-10">
+                                    <i class="fas fa-edit text-gray-400"></i>
+                                </th>
+                                <th
+                                    class="py-3 px-4 border-b border-gray-300 bg-gradient-to-r from-blue-50 to-blue-100 font-medium text-gray-700 sticky top-0">
+                                    Hình thức chi</th>
+                                <th
+                                    class="py-3 px-4 border-b border-gray-300 bg-gradient-to-r from-blue-50 to-blue-100 font-medium text-gray-700 sticky top-0">
+                                    Loại chi phí</th>
+                                <th
+                                    class="py-3 px-4 border-b border-gray-300 bg-gradient-to-r from-blue-50 to-blue-100 font-medium text-gray-700 sticky top-0">
+                                    Phương thức thanh toán</th>
+                                <th
+                                    class="py-3 px-4 border-b border-gray-300 bg-gradient-to-r from-blue-50 to-blue-100 font-medium text-gray-700 sticky top-0">
+                                    Người đề xuất chi</th>
+                                <th
+                                    class="py-3 px-4 border-b border-gray-300 bg-gradient-to-r from-blue-50 to-blue-100 font-medium text-gray-700 sticky top-0">
+                                    Số tiền chi</th>
+                                <th
+                                    class="py-3 px-4 border-b border-gray-300 bg-gradient-to-r from-blue-50 to-blue-100 font-medium text-gray-700 sticky top-0 w-10">
+                                    <i class="fas fa-trash text-gray-400"></i>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="chiTietTableBody">
+                            <!-- Rows will be added here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="flex justify-end space-x-3">
+                    <span id="dataStatusText" class="text-sm text-gray-500 self-center mr-auto"></span>
+                    <button type="button" id="cancelBtn"
+                        class="px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-200 flex items-center">
+                        <i class="fas fa-times mr-2"></i> Hủy
+                    </button>
+                    <button type="button" id="saveAll"
+                        class="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-lg hover:from-blue-600 hover:to-blue-800 shadow-md hover:shadow-lg transition duration-200 flex items-center">
+                        <i class="fas fa-save mr-2"></i> Lưu tất cả
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Thêm Nhà Cung Cấp -->
+    <div id="nhaCungCapModal" class="fixed inset-0 bg-gray-800/70 backdrop-blur-sm z-50 hidden overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 sm:p-0">
+            <div class="relative w-full max-w-4xl p-6 mx-auto my-8 bg-white rounded-2xl shadow-xl">
+                <div class="flex items-center justify-between border-b border-gray-200 pb-4 mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Thêm nhà cung cấp mới</h3>
+                    <button type="button" class="text-gray-400 hover:text-gray-500" onclick="closeNhaCungCapModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <form id="nhaCungCapForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Mã nhà cung cấp</label>
+                        <input type="text" id="maNhaCungCap" class="w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tên nhà cung cấp<span
+                                class="text-red-500">*</span></label>
+                        <input type="text" id="tenNhaCungCapDayDu" class="w-full p-2 border border-gray-300 rounded-lg"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tên nhà cung cấp viết tắt</label>
+                        <input type="text" id="tenNhaCungCapVietTat"
+                            class="w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Loại nhà cung cấp</label>
+                        <select id="loaiNhaCungCap" class="w-full p-2 border border-gray-300 rounded-lg">
+                            <option value="Vật tư">Vật tư</option>
+                            <option value="Dịch vụ">Dịch vụ</option>
+                            <option value="Khác">Khác</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
+                        <textarea id="diaChi" class="w-full p-2 border border-gray-300 rounded-lg" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Mã số thuế</label>
+                        <input type="text" id="maSoThue" class="w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Số điện thoại <span
+                                class="text-red-500">*</span></label>
+                        <input type="tel" id="soDienThoai" class="w-full p-2 border border-gray-300 rounded-lg"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="email" class="w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Ghi chú</label>
+                        <textarea id="ghiChuNhaCungCap" class="w-full p-2 border border-gray-300 rounded-lg"
+                            rows="2"></textarea>
+                    </div>
+
+                    <div class="md:col-span-2 flex justify-end space-x-3 pt-4">
+                        <button type="button" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                            onclick="closeNhaCungCapModal()">
+                            Huỷ bỏ
+                        </button>
+                        <button type="submit"
+                            class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                            Lưu nhà cung cấp
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Chi Tiết Chi Phí Sản Xuất -->
+    <div id="chiPhiDetailModal" class="fixed inset-0 bg-gray-800/70 backdrop-blur-sm z-50 hidden overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 sm:p-0">
+            <div class="relative w-full max-w-4xl p-6 mx-auto my-8 bg-white rounded-2xl shadow-xl">
+                <div class="flex items-center justify-between border-b border-gray-200 pb-4 mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Chi tiết chi phí sản xuất</h3>
+                    <button type="button" class="text-gray-400 hover:text-gray-500" onclick="closeChiPhiDetailModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <form id="chiPhiDetailForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- ID đơn hàng (New) -->
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ID đơn hàng</label>
+                        <input type="text" id="modalIdDonHang" class="w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+
+                    <!-- ID hàng hoá (New) -->
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ID hàng hoá</label>
+                        <input type="text" id="modalIdHangHoa" class="w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Hình thức chi <span
+                                class="text-red-500">*</span></label>
+                        <select id="modalHinhThucChi" class="w-full p-2 border border-gray-300 rounded-lg" required>
+                            <option value="">-- Chọn --</option>
+                            <option value="Chi trực tiếp">Chi trực tiếp</option>
+                            <option value="Chi theo bảng kê">Chi theo bảng kê</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Loại chi phí <span
+                                class="text-red-500">*</span></label>
+                        <select id="modalLoaiChiPhi" class="w-full p-2 border border-gray-300 rounded-lg" required>
+                            <option value="">-- Chọn --</option>
+                            <option value="Vật tư">Vật tư</option>
+                            <option value="Gia công">Gia công</option>
+                            <option value="Vận chuyển">Vận chuyển</option>
+                            <option value="In ấn">In ấn</option>
+                            <option value="Làm khuôn">Làm khuôn</option>
+                            <option value="In nhanh">In nhanh</option>
+                            <option value="Thiết kế">Thiết kế</option>
+                            <option value="Khác">Khác</option>
+                            <option value="custom">Khác...</option>
+                        </select>
+                        <input type="text" id="modalLoaiChiPhiCustom"
+                            class="w-full p-2 border border-gray-300 rounded-lg mt-1 hidden"
+                            placeholder="Nhập loại chi phí">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Phương thức thanh toán</label>
+                        <select id="modalPhuongThucThanhToan" class="w-full p-2 border border-gray-300 rounded-lg">
+                            <option value="">-- Chọn --</option>
+                            <option value="MB">MB Ngân hàng Quân Đội (MB Bank) - CN Gia Lâm. STK: 6666.939.8888
+                                - Đỗ Trọng Nghĩa</option>
+                            <option value="VP">VP Ngân hàng VPBank - CN Thăng Long. STK: 156939258 - Công ty
+                                TNHH Sản xuất và Dịch vụ Đức Thành (DUC THANH SERPRO)</option>
+                            <option value="Grab">Grab</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Người đề xuất chi</label>
+                        <select id="modalNguoiDeXuatChi" class="w-full p-2 border border-gray-300 rounded-lg">
+                            <option value="">-- Chọn --</option>
+                            <!-- Sẽ được điền bởi JavaScript -->
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Ngày chi</label>
+                        <input type="date" id="modalNgayChi" class="w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Số tiền chi <span
+                                class="text-red-500">*</span></label>
+                        <input type="number" id="modalSoTienChi" class="w-full p-2 border border-gray-300 rounded-lg"
+                            required>
+                    </div>
+
+                    <div class="form-group lg:col-span-3">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Ghi chú</label>
+                        <textarea id="modalGhiChu" class="w-full p-2 border border-gray-300 rounded-lg"
+                            rows="3"></textarea>
+                    </div>
+
+                    <div class="lg:col-span-3 flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                        <button type="button" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                            onclick="closeChiPhiDetailModal()">
+                            Huỷ bỏ
+                        </button>
+                        <button type="submit"
+                            class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                            Cập nhật
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Thêm thư viện SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://hoangmv.github.io/ducthanh/key.js"></script>
+
+    <script>
+        // Class chính quản lý bảng kê công nợ
+        class BangKeCongNoManager {
+            // Hàm lấy tham số từ URL
+            getUrlParameter(name) {
+                name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+                const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+                const results = regex.exec(location.search);
+                return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+            }
+
+            constructor(appId, accessKey) {
+                this.appId = appId;
+                this.accessKey = accessKey;
+                this.bangKeCongNoData = null;
+                this.chiPhiList = [];
+                this.nhaCungCapList = [];
+                this.nhanVienList = [];
+                this.currentEditingRow = null;
+
+                // Lấy tên nhân viên từ URL
+                this.employeeName = this.getUrlParameter('nhanvien');
+
+                this.init();
+            }
+
+            async init() {
+                try {
+                    this.showLoading('Đang khởi tạo...');
+
+                    // Kiểm tra kết nối API
+                    const isConnected = await this.testAppSheetConnection();
+                    if (!isConnected) {
+                        throw new Error('Không thể kết nối đến AppSheet API');
+                    }
+
+                    // Hiển thị tên nhân viên nếu có
+                    if (this.employeeName) {
+                        const headerDiv = document.querySelector('header div.flex.items-center.space-x-4');
+                        if (headerDiv) {
+                            const userInfoElement = document.createElement('div');
+                            userInfoElement.className = 'ml-auto text-sm text-gray-600';
+                            userInfoElement.innerHTML = `<i class="fas fa-user mr-1"></i> ${this.employeeName}`;
+                            headerDiv.appendChild(userInfoElement);
+                        }
+                    }
+
+                    // Thiết lập các giá trị ban đầu
+                    this.setupEventListeners();
+                    this.generateNewBangKeCode();
+                    this.setDefaultDate();
+
+                    // Tải dữ liệu song song
+                    await Promise.all([
+                        this.loadNhaCungCapList(),
+                        this.loadNhanVienList()
+                    ]);
+
+                    // Đặt nhân viên từ tham số URL làm giá trị được chọn trong dropdown
+                    this.setEmployeeFromUrl();
+
+                    this.updateProgressSteps(1);
+
+                    this.hideLoading();
+                } catch (error) {
+                    console.error('Lỗi khởi tạo:', error);
+                    this.hideLoading();
+                    this.showAlert('error', 'Lỗi khởi tạo', 'Đã xảy ra lỗi khi khởi tạo ứng dụng. Vui lòng thử lại sau.');
+                }
+            }
+
+            // Thiết lập nhân viên từ URL
+            setEmployeeFromUrl() {
+                if (this.employeeName && this.nhanVienChoices) {
+                    // Tìm ID nhân viên khớp với tên từ URL
+                    const foundEmployee = this.nhanVienList.find(nv =>
+                        nv['Tên nhân viên'] === this.employeeName ||
+                        (nv['Mã nhân viên'] && nv['Mã nhân viên'] + ' - ' + nv['Tên nhân viên'] === this.employeeName)
+                    );
+
+                    if (foundEmployee) {
+                        const employeeId = foundEmployee['ID nhân viên'] || foundEmployee.ID;
+                        // Đặt giá trị cho dropdown
+                        this.nhanVienChoices.setChoiceByValue(employeeId);
+                        console.log('Set employee from URL:', this.employeeName, 'ID:', employeeId);
+                    } else {
+                        console.log('Employee not found in list:', this.employeeName);
+                    }
+                }
+            }
+
+            // Kiểm tra kết nối API
+            async testAppSheetConnection() {
+                try {
+                    this.showLoading('Đang kết nối...');
+
+                    const response = await axios({
+                        method: 'POST',
+                        url: `https://www.appsheet.com/api/v2/apps/${this.appId}/tables/Nhà cung cấp/Action`,
+                        headers: {
+                            'ApplicationAccessKey': this.accessKey,
+                            'Content-Type': 'application/json'
+                        },
+                        data: {
+                            "Action": "Find",
+                            "Properties": {
+                                "Selector": "Select(Nhà cung cấp)"
+                            }
+                        }
+                    });
+
+                    this.hideLoading();
+
+                    if (response.status === 200) {
+                        console.log('Kết nối API thành công:', response);
+                        return true;
+                    } else {
+                        throw new Error('Phản hồi không thành công');
+                    }
+                } catch (error) {
+                    this.hideLoading();
+                    console.error('Lỗi kết nối API:', error);
+
+                    let errorMessage = 'Không thể kết nối đến AppSheet API.';
+                    if (error.response) {
+                        errorMessage += ` Status: ${error.response.status}. ${error.response.data?.error || ''}`;
+                    }
+
+                    this.showAlert('error', 'Lỗi kết nối!', errorMessage);
+                    return false;
+                }
+            }
+
+            // Sao chép hàng
+            copyRow(button) {
+                const row = button.closest('tr');
+                if (!row) return;
+
+                // Sao chép toàn bộ hàng
+                const newRow = row.cloneNode(true);
+                newRow.classList.add('animate-fade-in');
+
+                // Chèn sau hàng hiện tại
+                row.parentNode.insertBefore(newRow, row.nextSibling);
+
+                // Gắn lại event listeners cho inputs của hàng mới
+                const inputs = newRow.querySelectorAll('input');
+                if (inputs[1]) {
+                    inputs[1].addEventListener('input', () => this.calculateRowValues(newRow));
+                }
+
+                // Xóa ID hàng hoặc định danh duy nhất có thể đã được sao chép
+
+                // Cập nhật tính toán
+                this.calculateRowValues(newRow);
+                this.updateOrderTotals();
+
+                // Làm nổi bật hàng mới trong thời gian ngắn
+                newRow.style.backgroundColor = '#e6f7ff';
+                setTimeout(() => {
+                    newRow.style.backgroundColor = '';
+                }, 1000);
+
+                // Cuộn đến hàng mới
+                newRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            // Thiết lập sự kiện
+            setupEventListeners() {
+                // Khởi tạo quản lý dropdown tùy chỉnh
+                this.loaiChiPhiManager = new CustomDropdownManager('modalLoaiChiPhi', 'savedLoaiChiPhi');
+
+                // Sự kiện cho dropdowns trong modal
+                document.getElementById('modalLoaiChiPhi').addEventListener('change', function () {
+                    const customInput = document.getElementById('modalLoaiChiPhiCustom');
+                    if (this.value === 'custom') {
+                        customInput.classList.remove('hidden');
+                        customInput.focus();
+                    } else {
+                        customInput.classList.add('hidden');
+                        customInput.value = '';
+                    }
+                });
+
+                // Nút thêm nhà cung cấp
+                document.getElementById('btnThemNhaCungCap').addEventListener('click', () => this.openNhaCungCapModal());
+
+                // Form nhà cung cấp
+                document.getElementById('nhaCungCapForm').addEventListener('submit', (e) => this.handleThemNhaCungCap(e));
+
+                // Các nút chức năng
+                document.getElementById('btnTaoChiTiet').addEventListener('click', () => this.addNewRow());
+                document.getElementById('resetFormBtn').addEventListener('click', () => this.confirmResetForm());
+                document.getElementById('cancelBtn').addEventListener('click', () => this.confirmCancelChiPhi());
+                document.getElementById('saveAll').addEventListener('click', () => this.saveDataToAppSheet());
+
+                // Form chi tiết chi phí
+                document.getElementById('chiPhiDetailForm').addEventListener('submit', (e) => this.handleUpdateChiPhi(e));
+
+                // Sự kiện tính toán trong modal
+                ['modalSoTienChi'].forEach(id => {
+                    document.getElementById(id).addEventListener('input', () => this.calculateModalValues());
+                });
+
+                // Expose window methods for HTML event handlers
+                window.deleteRow = (btn) => this.deleteRow(btn);
+                window.openChiPhiDetail = (btn) => this.openChiPhiDetail(btn);
+                window.closeChiPhiDetailModal = () => this.closeChiPhiDetailModal();
+                window.openNhaCungCapModal = () => this.openNhaCungCapModal();
+                window.closeNhaCungCapModal = () => this.closeNhaCungCapModal();
+                window.copyRow = (btn) => this.copyRow(btn);
+            }
+
+            // Tạo mã bảng kê mới
+            generateNewBangKeCode() {
+                document.getElementById('maBangKe').value = this.generateMaBangKe();
+            }
+
+            // Thiết lập ngày mặc định
+            setDefaultDate() {
+                const today = new Date();
+                document.getElementById('ngayTao').value = this.formatDate(today);
+                document.getElementById('ngayChi').value = this.formatDate(today);
+            }
+
+            // Tạo mã bảng kê
+            generateMaBangKe() {
+                const today = new Date();
+                const year = today.getFullYear().toString().slice(-2); // Lấy 2 số cuối của năm
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                return `BK${year}${month}${day}`;
+            }
+
+            // Định dạng ngày
+            formatDate(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            // Định dạng tiền tệ
+            formatCurrency(number) {
+                if (number === null || number === undefined || isNaN(number)) return "0";
+                return new Intl.NumberFormat('vi-VN', {
+                    style: 'decimal',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                }).format(number);
+            }
+
+            // Chuyển đổi từ chuỗi tiền về số
+            parseCurrency(currencyString) {
+                if (!currencyString) return 0;
+                return parseFloat(String(currencyString).replace(/\./g, '').replace(/,/g, '.'));
+            }
+
+            // Tạo ID cho chi phí
+            generateChiPhiID(maBangKe, index) {
+                return `${maBangKe}-CP${String(index).padStart(3, '0')}`;
+            }
+
+            // Hiển thị loading
+            showLoading(message = 'Đang xử lý...') {
+                const loadingText = document.getElementById('loadingText');
+                const loadingOverlay = document.getElementById('loadingOverlay');
+
+                if (loadingText) loadingText.textContent = message;
+                if (loadingOverlay) {
+                    loadingOverlay.classList.remove('hidden');
+                    console.log('Loading overlay displayed'); // Debug
+                } else {
+                    console.error('Loading overlay element not found');
+                }
+            }
+
+            // Ẩn loading
+            hideLoading() {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }
+
+            // Hiển thị thông báo
+            showAlert(icon, title, text = '') {
+                return Swal.fire({
+                    icon,
+                    title,
+                    text,
+                    confirmButtonColor: icon === 'error' ? '#d33' : '#0ea5e9'
+                });
+            }
+
+            // Cập nhật tiến trình
+            updateProgressSteps(step) {
+                if (step >= 1) {
+                    document.getElementById('progress1').style.width = '100%';
+                } else {
+                    document.getElementById('progress1').style.width = '0%';
+                }
+
+                if (step >= 2) {
+                    document.getElementById('step2').classList.remove('bg-gray-300', 'text-gray-600');
+                    document.getElementById('step2').classList.add('bg-primary-600', 'text-white');
+                    document.getElementById('progress2').style.width = '100%';
+                } else {
+                    document.getElementById('step2').classList.add('bg-gray-300', 'text-gray-600');
+                    document.getElementById('step2').classList.remove('bg-primary-600', 'text-white');
+                    document.getElementById('progress2').style.width = '0%';
+                }
+
+                if (step >= 3) {
+                    document.getElementById('step3').classList.remove('bg-gray-300', 'text-gray-600');
+                    document.getElementById('step3').classList.add('bg-primary-600', 'text-white');
+                } else {
+                    document.getElementById('step3').classList.add('bg-gray-300', 'text-gray-600');
+                    document.getElementById('step3').classList.remove('bg-primary-600', 'text-white');
+                }
+            }
+
+            // Tải danh sách nhà cung cấp
+            async loadNhaCungCapList() {
+                try {
+                    const response = await axios({
+                        method: 'POST',
+                        url: `https://www.appsheet.com/api/v2/apps/${this.appId}/tables/Nhà cung cấp/Action`,
+                        headers: {
+                            'ApplicationAccessKey': this.accessKey,
+                            'Content-Type': 'application/json'
+                        },
+                        data: {
+                            "Action": "Find",
+                            "Properties": {
+                                "Locale": "vi-VN",
+                                "Timezone": "Asia/Ho_Chi_Minh",
+                                "Selector": "Filter(Nhà cung cấp, true)"
+                            }
+                        }
+                    });
+
+                    if (response.data && response.data.Rows) {
+                        this.nhaCungCapList = response.data.Rows;
+                    } else if (Array.isArray(response.data)) {
+                        this.nhaCungCapList = response.data;
+                    } else {
+                        console.error('Cấu trúc dữ liệu nhà cung cấp không đúng:', response.data);
+                        this.nhaCungCapList = [];
+                    }
+
+                    // Khởi tạo Choices.js cho select nhà cung cấp
+                    const nhaCungCapSelect = document.getElementById('nhaCungCap');
+                    nhaCungCapSelect.innerHTML = '<option value="">-- Chọn nhà cung cấp --</option>';
+
+                    this.nhaCungCapList.forEach(ncc => {
+                        const option = document.createElement('option');
+                        option.value = ncc['ID nhà cung cấp'] || ncc.ID;
+                        option.textContent = ncc['Tên nhà cung cấp'] || ncc.Ten;
+                        nhaCungCapSelect.appendChild(option);
+                    });
+
+                    // Khởi tạo Choices
+                    if (this.nhaCungCapChoices) {
+                        this.nhaCungCapChoices.destroy();
+                    }
+
+                    this.nhaCungCapChoices = new Choices('#nhaCungCap', {
+                        searchEnabled: true,
+                        searchPlaceholderValue: 'Nhập tên để tìm...',
+                        noResultsText: 'Không tìm thấy nhà cung cấp',
+                        itemSelectText: 'Chọn',
+                        removeItemButton: true,
+                        searchFields: ['label'],
+                        position: 'bottom'
+                    });
+
+                    this.hideLoading();
+                } catch (error) {
+                    console.error('Lỗi khi tải danh sách nhà cung cấp:', error);
+                    this.hideLoading();
+                    this.showAlert('error', 'Lỗi kết nối', 'Không thể tải danh sách nhà cung cấp. Vui lòng thử lại sau.');
+                }
+            }
+
+            // Tải danh sách nhân viên
+            async loadNhanVienList() {
+                try {
+                    const response = await axios({
+                        method: 'POST',
+                        url: `https://www.appsheet.com/api/v2/apps/${this.appId}/tables/Nhân viên/Action`,
+                        headers: {
+                            'ApplicationAccessKey': this.accessKey,
+                            'Content-Type': 'application/json'
+                        },
+                        data: {
+                            "Action": "Find",
+                            "Properties": {
+                                "Locale": "vi-VN",
+                                "Timezone": "Asia/Ho_Chi_Minh",
+                                "Selector": "Filter(Nhân viên, true)"
+                            }
+                        }
+                    });
+
+                    if (response.data && response.data.Rows) {
+                        this.nhanVienList = response.data.Rows;
+                    } else if (Array.isArray(response.data)) {
+                        this.nhanVienList = response.data;
+                    } else {
+                        console.error('Cấu trúc dữ liệu nhân viên không đúng:', response.data);
+                        this.nhanVienList = [];
+                    }
+
+                    // Khởi tạo các select nhân viên
+                    const selectors = ['nguoiDuyet', 'nguoiChi', 'modalNguoiDeXuatChi', 'modalNguoiDuyetChi'];
+
+                    selectors.forEach(selector => {
+                        const select = document.getElementById(selector);
+                        if (select) {
+                            select.innerHTML = '<option value="">-- Chọn nhân viên --</option>';
+
+                            this.nhanVienList.forEach(nhanVien => {
+                                const option = document.createElement('option');
+                                option.value = nhanVien['ID nhân viên'] || nhanVien.ID;
+                                option.textContent = nhanVien['Tên nhân viên'] || nhanVien.Ten;
+                                if (option.textContent) {
+                                    // Thêm mã nhân viên nếu có
+                                    if (nhanVien['Mã nhân viên']) {
+                                        option.textContent = `${nhanVien['Mã nhân viên']} - ${option.textContent}`;
+                                    }
+                                    select.appendChild(option);
+                                }
+                            });
+                        }
+                    });
+
+                    // Khởi tạo Choices cho nguoiDuyet và nguoiChi
+                    ['nguoiDuyet', 'nguoiChi'].forEach(id => {
+                        if (this[`${id}Choices`]) {
+                            this[`${id}Choices`].destroy();
+                        }
+
+                        this[`${id}Choices`] = new Choices(`#${id}`, {
+                            searchEnabled: true,
+                            searchPlaceholderValue: 'Nhập tên để tìm...',
+                            noResultsText: 'Không tìm thấy nhân viên',
+                            itemSelectText: 'Chọn',
+                            removeItemButton: true,
+                            searchFields: ['label'],
+                            position: 'bottom'
+                        });
+                    });
+
+                } catch (error) {
+                    console.error('Lỗi khi tải danh sách nhân viên:', error);
+                    this.showAlert('error', 'Lỗi kết nối', 'Không thể tải danh sách nhân viên. Vui lòng thử lại sau.');
+                }
+            }
+
+            // Xác nhận reset form
+            confirmResetForm() {
+                Swal.fire({
+                    title: 'Xác nhận làm mới',
+                    text: 'Bạn có chắc muốn làm mới toàn bộ form không?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#0ea5e9',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: 'Đồng ý',
+                    cancelButtonText: 'Hủy'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        this.resetForm();
+                    }
+                });
+            }
+
+            // Xác nhận hủy chi phí
+            confirmCancelChiPhi() {
+                Swal.fire({
+                    title: 'Xác nhận hủy',
+                    text: 'Bạn có chắc muốn hủy danh sách chi phí hiện tại?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#0ea5e9',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: 'Đồng ý',
+                    cancelButtonText: 'Không'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        document.getElementById('chiTietTableBody').innerHTML = '';
+                        document.getElementById('chiTietSection').classList.add('hidden');
+                        this.updateProgressSteps(1);
+                    }
+                });
+            }
+
+            // Làm mới form
+            resetForm() {
+                // Làm mới form công nợ
+                document.getElementById('bangKeForm').reset();
+
+                // Tạo mã mới
+                this.generateNewBangKeCode();
+
+                // Thiết lập ngày mặc định
+                this.setDefaultDate();
+
+                // Xóa tất cả chi phí
+                document.getElementById('chiTietTableBody').innerHTML = '';
+
+                // Ẩn phần chi tiết
+                document.getElementById('chiTietSection').classList.add('hidden');
+
+                // Cập nhật trạng thái tiến trình
+                this.updateProgressSteps(1);
+            }
+
+            // Thêm hàng mới
+            addNewRow() {
+                document.getElementById('chiTietSection').classList.remove('hidden');
+                const tableBody = document.getElementById('chiTietTableBody');
+                const newRow = document.createElement('tr');
+                newRow.classList.add('animate-fade-in');
+
+                // Khởi tạo các giá trị mặc định cho data attributes
+                newRow.dataset.loaiChiPhi = '';
+                // Nội dung hàng chi phí
+                newRow.innerHTML = `
+<td class="py-3 px-4 border-b border-gray-200">
+  <button type="button" class="text-blue-600 hover:text-blue-800" onclick="openChiPhiDetail(this)">
+    <i class="fas fa-edit"></i>
+  </button>
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <select class="w-full p-2 border border-gray-300 rounded-lg hinh-thuc-chi">
+    <option value="">-- Chọn --</option>
+    <option value="Chi trực tiếp">Chi trực tiếp</option>
+    <option value="Chi theo bảng kê">Chi theo bảng kê</option>
+  </select>
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <select class="w-full p-2 border border-gray-300 rounded-lg loai-chi-phi">
+    <option value="">-- Chọn --</option>
+    <option value="Vật tư">Vật tư</option>
+    <option value="Gia công">Gia công</option>
+    <option value="Vận chuyển">Vận chuyển</option>
+    <option value="In ấn">In ấn</option>
+    <option value="Làm khuôn">Làm khuôn</option>
+    <option value="In nhanh">In nhanh</option>
+    <option value="Thiết kế">Thiết kế</option>
+  </select>
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <select class="w-full p-2 border border-gray-300 rounded-lg phuong-thuc-tt">
+    <option value="">-- Chọn --</option>
+    <option value="MB">MB Ngân hàng Quân Đội (MB Bank) - CN Gia Lâm. STK: 6666.939.8888
+                                        - Đỗ Trọng Nghĩa</option>
+    <option value="VP">VP Ngân hàng VPBank - CN Thăng Long. STK: 156939258 - Công ty
+                                        TNHH Sản xuất và Dịch vụ Đức Thành (DUC THANH SERPRO)</option>
+    <option value="Grab">Grab</option>
+  </select>
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <select class="w-full p-2 border border-gray-300 rounded-lg nguoi-de-xuat">
+    <option value="">-- Chọn --</option>
+    <!-- Sẽ được điền bởi JavaScript -->
+  </select>
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <input type="number" class="w-full p-2 border border-gray-300 rounded-lg so-tien-chi" 
+      min="0" step="1000" value="0">
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <div class="flex space-x-2">
+    <button type="button" class="text-green-500 hover:text-green-700" onclick="copyRow(this)">
+      <i class="fas fa-copy"></i>
+    </button>
+    <button type="button" class="text-red-500 hover:text-red-700" onclick="deleteRow(this)">
+      <i class="fas fa-trash"></i>
+    </button>
+  </div>
+</td>
+`;
+                tableBody.appendChild(newRow);
+
+                // Điền danh sách nhân viên vào dropdown người đề xuất
+                const nguoiDeXuatSelect = newRow.querySelector('.nguoi-de-xuat');
+                if (nguoiDeXuatSelect && this.nhanVienList) {
+                    this.nhanVienList.forEach(nhanVien => {
+                        if (nhanVien['Tên nhân viên']) {
+                            const option = document.createElement('option');
+                            option.value = nhanVien['ID nhân viên'] || nhanVien.ID;
+                            let displayName = nhanVien['Tên nhân viên'];
+                            if (nhanVien['Mã nhân viên']) {
+                                displayName = `${nhanVien['Mã nhân viên']} - ${displayName}`;
+                            }
+                            option.textContent = displayName;
+                            nguoiDeXuatSelect.appendChild(option);
+                        }
+                    });
+
+                    // Nếu có employeeName, chọn nhân viên hiện tại
+                    if (this.employeeName) {
+                        const foundEmployee = this.nhanVienList.find(nv =>
+                            nv['Tên nhân viên'] === this.employeeName ||
+                            (nv['Mã nhân viên'] && nv['Mã nhân viên'] + ' - ' + nv['Tên nhân viên'] === this.employeeName)
+                        );
+
+                        if (foundEmployee) {
+                            nguoiDeXuatSelect.value = foundEmployee['ID nhân viên'] || foundEmployee.ID;
+                        }
+                    }
+                }
+
+                // Thêm sự kiện cho input số tiền để tính toán
+                const soTienChiInput = newRow.querySelector('.so-tien-chi');
+                if (soTienChiInput) {
+                    soTienChiInput.addEventListener('input', () => this.calculateRowValues(newRow));
+                    soTienChiInput.addEventListener('input', () => this.updateOrderTotals());
+                }
+
+                this.calculateRowValues(newRow);
+                newRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                this.updateProgressSteps(2);
+            }
+
+            // Xóa hàng
+            deleteRow(button) {
+                const row = button.closest('tr');
+                row.classList.add('animate-fade-out');
+
+                setTimeout(() => {
+                    row.remove();
+
+                    // Cập nhật tổng số sau khi xóa
+                    this.updateOrderTotals();
+
+                    // Ẩn phần chi tiết nếu không còn hàng nào
+                    if (document.getElementById('chiTietTableBody').children.length === 0) {
+                        document.getElementById('chiTietSection').classList.add('hidden');
+                        // Cập nhật trạng thái tiến trình
+                        this.updateProgressSteps(1);
+                    }
+                }, 300);
+            }
+
+            // Tính toán giá trị cho một hàng
+            calculateRowValues(row) {
+                if (!row) return;
+
+                const soTienChiInput = row.querySelector('.so-tien-chi');
+                if (!soTienChiInput) return;
+
+                // Lấy giá trị số tiền chi
+                const soTienChi = parseFloat(soTienChiInput.value) || 0;
+
+                // Lưu vào data attribute để tính toán
+                row.dataset.soTienChi = soTienChi;
+
+                // Cập nhật tổng giá trị
+                this.updateOrderTotals();
+            }
+
+            // Cập nhật tổng giá trị
+            updateOrderTotals() {
+                const rows = document.querySelectorAll('#chiTietTableBody tr');
+                let tongChiPhi = 0;
+
+                rows.forEach(row => {
+                    // Sử dụng giá trị từ data attribute
+                    tongChiPhi += parseFloat(row.dataset.soTienChi) || 0;
+                });
+
+                // Cập nhật trường với giá trị định dạng
+                document.getElementById('tongChiPhi').value = this.formatCurrency(tongChiPhi);
+            }
+
+            // Thu thập dữ liệu từ bảng chi tiết chi phí
+            collectChiPhiData() {
+                const maBangKe = document.getElementById('maBangKe').value;
+                const chiPhiRows = document.querySelectorAll('#chiTietTableBody tr');
+                const chiPhiItems = [];
+
+                chiPhiRows.forEach((row, index) => {
+                    // Lấy giá trị từ các phần tử
+                    const hinhThucChi = row.querySelector('.hinh-thuc-chi').value;
+                    const loaiChiPhi = row.querySelector('.loai-chi-phi').value;
+                    const phuongThucTT = row.querySelector('.phuong-thuc-tt').value;
+                    const nguoiDeXuat = row.querySelector('.nguoi-de-xuat').value;
+                    const soTienChi = parseFloat(row.querySelector('.so-tien-chi').value) || 0;
+
+                    // Lấy giá trị từ data attributes
+                    const ngayChi = row.dataset.ngayChi || '';
+                    const ghiChu = row.dataset.ghiChu || '';
+                    const idDonHang = row.dataset.idDonHang || '';
+                    const idHangHoa = row.dataset.idHangHoa || '';
+
+                    // ID nhà cung cấp từ form chính
+                    const idNhaCungCap = document.getElementById('nhaCungCap').value;
+
+                    // Tạo đối tượng chi phí chỉ với các trường yêu cầu
+                    const chiPhiItem = {
+                        'ID chi phí': this.generateChiPhiID(maBangKe, index + 1),
+                        'ID đơn hàng': idDonHang,
+                        'ID hàng hoá': idHangHoa,
+                        'Mã đơn hàng': maBangKe,
+                        'ID bảng kê công nợ phải trả': maBangKe,
+                        'Hình thức chi': hinhThucChi,
+                        'Loại chi phí': loaiChiPhi,
+                        'ID nhà cung cấp': idNhaCungCap,
+                        'Phương thức thanh toán': phuongThucTT,
+                        'Ngày chi': ngayChi,
+                        'Người đề xuất chi': nguoiDeXuat,
+                        'Số tiền chi': soTienChi,
+                        'Ghi chú': ghiChu,
+                        'Lịch sử cập nhật': this.formatDate(new Date()) + ' - Tạo mới',
+                        'Người tạo': this.employeeName
+                    };
+
+                    chiPhiItems.push(chiPhiItem);
+                });
+
+                return chiPhiItems;
+            }
+
+            // Lưu dữ liệu vào AppSheet
+            async saveDataToAppSheet() {
+                try {
+                    // Kiểm tra các trường bắt buộc
+                    const maBangKe = document.getElementById('maBangKe').value;
+                    const nhaCungCap = document.getElementById('nhaCungCap').value;
+                    const ngayTao = document.getElementById('ngayTao').value;
+
+                    if (!maBangKe || !nhaCungCap || !ngayTao) {
+                        throw new Error('Vui lòng điền đầy đủ thông tin bắt buộc: Mã bảng kê, Nhà cung cấp, Ngày tạo');
+                    }
+
+                    // Kiểm tra danh sách chi phí
+                    const chiPhiRows = document.querySelectorAll('#chiTietTableBody tr');
+                    if (chiPhiRows.length === 0) {
+                        throw new Error('Vui lòng thêm ít nhất một chi phí vào bảng kê');
+                    }
+
+                    // Tạo promise toast thay vì loading overlay
+                    const savePromise = new Promise(async (resolve, reject) => {
+                        try {
+                            // Thu thập dữ liệu bảng kê
+                            const bangKeData = {
+                                'ID bảng kê công nợ phải trả': maBangKe,
+                                'Mã bảng kê công nợ phải trả': maBangKe,
+                                'ID nhà cung cấp': nhaCungCap,
+                                'Trạng thái duyệt': document.getElementById('trangThaiDuyet').value,
+                                'Người duyệt': document.getElementById('nguoiDuyet').value,
+                                'Ngày chi': document.getElementById('ngayChi').value,
+                                'Người chi': document.getElementById('nguoiChi').value,
+                                'Ngày tạo': ngayTao,
+                                'Người tạo': this.employeeName
+                            };
+
+                            // Tạo payload cho bảng kê
+                            const bangKePayload = {
+                                "Action": "Add",
+                                "Properties": {},
+                                "Rows": [bangKeData]
+                            };
+
+                            // Thu thập dữ liệu chi phí
+                            this.chiPhiList = this.collectChiPhiData();
+
+                            // Kiểm tra chi phí
+                            for (const item of this.chiPhiList) {
+                                if (!item['Hình thức chi']) {
+                                    throw new Error('Vui lòng chọn hình thức chi cho tất cả các chi phí');
+                                }
+                                if (!item['Loại chi phí']) {
+                                    throw new Error('Vui lòng chọn loại chi phí cho tất cả các chi phí');
+                                }
+                                if (!item['Số tiền chi'] || item['Số tiền chi'] <= 0) {
+                                    throw new Error('Vui lòng nhập số tiền chi hợp lệ cho tất cả các chi phí');
+                                }
+                            }
+
+                            // Tạo payload chi phí
+                            const chiPhiPayload = {
+                                "Action": "Add",
+                                "Properties": {},
+                                "Rows": this.chiPhiList
+                            };
+
+                            // Use Promise.all to send both requests at the same time
+                            const [responseBangKe, responseChiPhi] = await Promise.all([
+                                axios({
+                                    method: 'POST',
+                                    url: `https://www.appsheet.com/api/v2/apps/${this.appId}/tables/Bảng kê công nợ phải trả/Action`,
+                                    headers: {
+                                        'ApplicationAccessKey': this.accessKey,
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json'
+                                    },
+                                    data: bangKePayload
+                                }),
+                                axios({
+                                    method: 'POST',
+                                    url: `https://www.appsheet.com/api/v2/apps/${this.appId}/tables/Chi phí sản xuất/Action`,
+                                    headers: {
+                                        'ApplicationAccessKey': this.accessKey,
+                                        'Content-Type': 'application/json'
+                                    },
+                                    data: chiPhiPayload
+                                })
+                            ]);
+
+                            // Log API responses for debugging
+                            console.log('Bảng kê response:', responseBangKe.status, responseBangKe.data);
+                            console.log('Chi phí response:', responseChiPhi.status, responseChiPhi.data);
+
+                            // Check results
+                            if (responseBangKe.status !== 200) {
+                                throw new Error(`API Error: ${responseBangKe.status} - ${JSON.stringify(responseBangKe.data)}`);
+                            }
+
+                            if (responseChiPhi.status !== 200) {
+                                throw new Error(`API Error: ${responseChiPhi.status} - ${JSON.stringify(responseChiPhi.data)}`);
+                            }
+
+                            // Update progress steps
+                            this.updateProgressSteps(3);
+                            resolve("Lưu thành công!");
+
+                            // Reset form after successful save
+                            setTimeout(() => this.resetForm(), 1500);
+                        } catch (error) {
+                            reject(error);
+                        }
+                    });
+
+                    // Use FuiToast.promise
+                    FuiToast.promise(
+                        savePromise,
+                        {
+                            loading: 'Đang lưu dữ liệu...',
+                            success: () => 'Đã lưu bảng kê công nợ và chi phí thành công!',
+                            error: (error) => `Lỗi: ${error.message || 'Có lỗi xảy ra khi lưu thông tin!'}`
+                        },
+                        {
+                            isClose: true
+                        }
+                    );
+                } catch (error) {
+                    console.error('Lỗi khi lưu dữ liệu:', error);
+                    FuiToast.error(error.message || 'Có lỗi xảy ra khi lưu thông tin! Vui lòng thử lại.');
+                }
+            }
+
+            // Mở modal chi tiết chi phí
+            openChiPhiDetail(button) {
+                this.currentEditingRow = button.closest('tr');
+
+                // Lấy giá trị từ các phần tử trong hàng
+                const hinhThucChi = this.currentEditingRow.querySelector('.hinh-thuc-chi').value;
+                const loaiChiPhi = this.currentEditingRow.querySelector('.loai-chi-phi').value;
+                const phuongThucTT = this.currentEditingRow.querySelector('.phuong-thuc-tt').value;
+                const nguoiDeXuat = this.currentEditingRow.querySelector('.nguoi-de-xuat').value;
+                const soTienChi = this.currentEditingRow.querySelector('.so-tien-chi').value;
+
+                // Cập nhật giá trị trong modal
+                document.getElementById('modalHinhThucChi').value = hinhThucChi;
+                document.getElementById('modalLoaiChiPhi').value = loaiChiPhi;
+                document.getElementById('modalPhuongThucThanhToan').value = phuongThucTT;
+                document.getElementById('modalNguoiDeXuatChi').value = nguoiDeXuat;
+                document.getElementById('modalSoTienChi').value = soTienChi;
+
+                // Lấy dữ liệu từ data attributes nếu có
+                document.getElementById('modalNgayChi').value = this.currentEditingRow.dataset.ngayChi || '';
+                document.getElementById('modalGhiChu').value = this.currentEditingRow.dataset.ghiChu || '';
+                document.getElementById('modalIdDonHang').value = this.currentEditingRow.dataset.idDonHang || '';
+                document.getElementById('modalIdHangHoa').value = this.currentEditingRow.dataset.idHangHoa || '';
+
+                // Xử lý loại chi phí tùy chỉnh
+                const modalLoaiChiPhi = document.getElementById('modalLoaiChiPhi');
+                const modalLoaiChiPhiCustom = document.getElementById('modalLoaiChiPhiCustom');
+
+                if (loaiChiPhi && !modalLoaiChiPhi.querySelector(`option[value="${loaiChiPhi}"]`)) {
+                    modalLoaiChiPhi.value = 'custom';
+                    modalLoaiChiPhiCustom.value = loaiChiPhi;
+                    modalLoaiChiPhiCustom.classList.remove('hidden');
+                } else {
+                    modalLoaiChiPhiCustom.classList.add('hidden');
+                }
+
+                // Hiển thị modal
+                document.getElementById('chiPhiDetailModal').classList.remove('hidden');
+            }
+
+            // Đóng modal chi tiết chi phí
+            closeChiPhiDetailModal() {
+                document.getElementById('chiPhiDetailModal').classList.add('hidden');
+                this.currentEditingRow = null;
+            }
+
+            // Tính toán giá trị trong modal
+            calculateModalValues() {
+                // Đơn giản chỉ có số tiền chi, không cần tính toán phức tạp
+                // Có thể mở rộng trong tương lai nếu cần
+            }
+
+            // Xử lý cập nhật thông tin chi phí
+            handleUpdateChiPhi(event) {
+                event.preventDefault();
+
+                if (!this.currentEditingRow) return;
+
+                try {
+                    // Lấy giá trị từ form modal
+                    const hinhThucChi = document.getElementById('modalHinhThucChi').value;
+                    const loaiChiPhiControl = document.getElementById('modalLoaiChiPhi');
+                    const loaiChiPhiCustom = document.getElementById('modalLoaiChiPhiCustom');
+                    const phuongThucTT = document.getElementById('modalPhuongThucThanhToan').value;
+                    const nguoiDeXuat = document.getElementById('modalNguoiDeXuatChi').value;
+                    const ngayChi = document.getElementById('modalNgayChi').value;
+                    const soTienChi = document.getElementById('modalSoTienChi').value;
+                    const ghiChu = document.getElementById('modalGhiChu').value;
+                    const idDonHang = document.getElementById('modalIdDonHang').value;
+                    const idHangHoa = document.getElementById('modalIdHangHoa').value;
+
+                    // Xác định loại chi phí (từ select hoặc custom input)
+                    let loaiChiPhi = loaiChiPhiControl.value;
+                    if (loaiChiPhi === 'custom') {
+                        loaiChiPhi = loaiChiPhiCustom.value;
+                    }
+
+                    // Cập nhật giá trị trong hàng
+                    this.currentEditingRow.querySelector('.hinh-thuc-chi').value = hinhThucChi;
+                    this.currentEditingRow.querySelector('.loai-chi-phi').value = loaiChiPhi;
+                    this.currentEditingRow.querySelector('.phuong-thuc-tt').value = phuongThucTT;
+                    this.currentEditingRow.querySelector('.nguoi-de-xuat').value = nguoiDeXuat;
+                    this.currentEditingRow.querySelector('.so-tien-chi').value = soTienChi;
+
+                    // Lưu các giá trị bổ sung vào data attributes
+                    this.currentEditingRow.dataset.ngayChi = ngayChi;
+                    this.currentEditingRow.dataset.ghiChu = ghiChu;
+                    this.currentEditingRow.dataset.soTienChi = soTienChi;
+                    this.currentEditingRow.dataset.idDonHang = idDonHang;
+                    this.currentEditingRow.dataset.idHangHoa = idHangHoa;
+
+                    // Cập nhật lịch sử cập nhật
+                    const currentDate = this.formatDate(new Date());
+                    const currentHistory = this.currentEditingRow.dataset.lichSuCapNhat || '';
+                    this.currentEditingRow.dataset.lichSuCapNhat = currentHistory
+                        ? `${currentHistory}, ${currentDate} - Cập nhật`
+                        : `${currentDate} - Cập nhật`;
+
+                    // Cập nhật tính toán
+                    this.calculateRowValues(this.currentEditingRow);
+                    this.updateOrderTotals();
+
+                    // Đóng modal
+                    this.closeChiPhiDetailModal();
+
+                    // Hiển thị thông báo thành công
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Cập nhật thành công!',
+                        text: 'Đã cập nhật thông tin chi phí.',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                } catch (error) {
+                    console.error('Lỗi cập nhật chi phí:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Lỗi!',
+                        text: 'Có lỗi xảy ra khi cập nhật thông tin.',
+                        showConfirmButton: true
+                    });
+                }
+            }
+
+            // Mở modal thêm nhà cung cấp
+            openNhaCungCapModal() {
+                document.getElementById('nhaCungCapModal').classList.remove('hidden');
+            }
+
+            // Đóng modal thêm nhà cung cấp
+            closeNhaCungCapModal() {
+                document.getElementById('nhaCungCapModal').classList.add('hidden');
+                document.getElementById('nhaCungCapForm').reset();
+            }
+
+            // Xử lý thêm nhà cung cấp mới
+            async handleThemNhaCungCap(event) {
+                event.preventDefault();
+
+                try {
+                    this.showLoading('Đang lưu thông tin nhà cung cấp...');
+
+                    const nhaCungCapData = {
+                        'Mã nhà cung cấp': document.getElementById('maNhaCungCap').value,
+                        'Tên nhà cung cấp': document.getElementById('tenNhaCungCapDayDu').value,
+                        'Tên nhà cung cấp viết tắt': document.getElementById('tenNhaCungCapVietTat').value,
+                        'Loại nhà cung cấp': document.getElementById('loaiNhaCungCap').value,
+                        'Địa chỉ': document.getElementById('diaChi').value,
+                        'MST': document.getElementById('maSoThue').value,
+                        'SĐT': document.getElementById('soDienThoai').value,
+                        'Email': document.getElementById('email').value,
+                        'Ghi chú': document.getElementById('ghiChuNhaCungCap').value,
+                        'Người tạo': this.employeeName,
+                        'Ngày tạo': this.formatDate(new Date())
+                    };
+
+                    const response = await axios({
+                        method: 'POST',
+                        url: `https://www.appsheet.com/api/v2/apps/${this.appId}/tables/Nhà cung cấp/Action`,
+                        headers: {
+                            'ApplicationAccessKey': this.accessKey,
+                            'Content-Type': 'application/json'
+                        },
+                        data: {
+                            "Action": "Add",
+                            "Properties": {
+                                "Locale": "vi-VN",
+                                "Timezone": "Asia/Ho_Chi_Minh"
+                            },
+                            "Rows": [nhaCungCapData]
+                        }
+                    });
+
+                    if (response.status === 200) {
+                        // Tạo ID tạm thời cho nhà cung cấp mới
+                        const newSupplierId = nhaCungCapData['Mã nhà cung cấp'] ||
+                            'NEW_' + Date.now();
+
+                        // Thêm nhà cung cấp mới vào danh sách
+                        const newSupplier = {
+                            'ID nhà cung cấp': newSupplierId,
+                            'Tên nhà cung cấp': nhaCungCapData['Tên nhà cung cấp']
+                        };
+                        this.nhaCungCapList.push(newSupplier);
+
+                        // Tạo lại Choices.js cho nhà cung cấp
+                        if (this.nhaCungCapChoices) {
+                            this.nhaCungCapChoices.destroy();
+                        }
+
+                        // Tạo lại select 
+                        const nhaCungCapSelect = document.getElementById('nhaCungCap');
+                        nhaCungCapSelect.innerHTML = '<option value="">-- Chọn nhà cung cấp --</option>';
+
+                        this.nhaCungCapList.forEach(ncc => {
+                            const option = document.createElement('option');
+                            option.value = ncc['ID nhà cung cấp'] || ncc.ID;
+                            option.textContent = ncc['Tên nhà cung cấp'] || ncc.Ten;
+                            nhaCungCapSelect.appendChild(option);
+                        });
+
+                        // Khởi tạo lại Choices.js
+                        this.nhaCungCapChoices = new Choices('#nhaCungCap', {
+                            searchEnabled: true,
+                            searchPlaceholderValue: 'Nhập tên để tìm...',
+                            noResultsText: 'Không tìm thấy nhà cung cấp',
+                            itemSelectText: 'Chọn',
+                            removeItemButton: true,
+                            searchFields: ['label'],
+                            position: 'bottom'
+                        });
+
+                        // Chọn nhà cung cấp mới tạo
+                        this.nhaCungCapChoices.setChoiceByValue(newSupplierId);
+
+                        // Đóng modal và hiện thông báo
+                        this.closeNhaCungCapModal();
+                        this.showAlert('success', 'Thành công!', 'Đã thêm nhà cung cấp mới thành công!');
+                    }
+
+                } catch (error) {
+                    console.error('Lỗi khi thêm nhà cung cấp:', error);
+                    this.showAlert('error', 'Lỗi!', 'Không thể thêm nhà cung cấp. Vui lòng thử lại!');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+        }
+
+        // Class quản lý dropdown tùy chỉnh
+        class CustomDropdownManager {
+            constructor(selectId, storageKey) {
+                this.selectId = selectId;           // ID của phần tử select
+                this.storageKey = storageKey;       // Khóa để lưu vào localStorage
+                this.selectElement = document.getElementById(selectId);  // Phần tử select
+                this.customInput = document.getElementById(`${selectId}Custom`); // Input để nhập giá trị tùy chỉnh
+                this.init();
+            }
+
+            init() {
+                // Tải các tùy chọn đã lưu trước đó
+                this.loadSavedOptions();
+
+                // Thiết lập sự kiện listener cho việc thêm tùy chọn mới
+                if (this.customInput) {
+                    // Xử lý khi người dùng rời khỏi ô input
+                    this.customInput.addEventListener('blur', (e) => {
+                        if (e.target.value && this.selectElement.value === 'custom') {
+                            this.addCustomOption(e.target.value);
+                        }
+                    });
+
+                    // Xử lý khi người dùng nhấn phím Enter
+                    this.customInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' && e.target.value && this.selectElement.value === 'custom') {
+                            e.preventDefault();
+                            this.addCustomOption(e.target.value);
+                            this.selectElement.value = e.target.value;
+                            this.customInput.classList.add('hidden');
+                        }
+                    });
+                }
+            }
+
+            // Tải các tùy chọn đã lưu từ localStorage
+            loadSavedOptions() {
+                try {
+                    const savedOptions = JSON.parse(localStorage.getItem(this.storageKey)) || [];
+                    const customOptionPosition = this.getCustomOptionPosition();
+
+                    // Xóa các tùy chọn do người dùng thêm trước đó (trừ tùy chọn "custom")
+                    const options = Array.from(this.selectElement.options);
+                    for (let i = options.length - 1; i >= 0; i--) {
+                        if (options[i].classList.contains('user-added') && options[i].value !== 'custom') {
+                            this.selectElement.remove(i);
+                        }
+                    }
+
+                    // Thêm các tùy chọn đã lưu vào trước tùy chọn "custom"
+                    savedOptions.forEach(option => {
+                        if (!this.optionExists(option)) {
+                            const optElement = document.createElement('option');
+                            optElement.value = option;
+                            optElement.textContent = option;
+                            optElement.classList.add('user-added');
+
+                            this.selectElement.insertBefore(optElement, this.selectElement.options[customOptionPosition]);
+                        }
+                    });
+                } catch (error) {
+                    console.error(`Lỗi khi tải tùy chọn đã lưu cho ${this.selectId}:`, error);
+                }
+            }
+
+            // Tìm vị trí của tùy chọn "custom"
+            getCustomOptionPosition() {
+                for (let i = 0; i < this.selectElement.options.length; i++) {
+                    if (this.selectElement.options[i].value === 'custom') {
+                        return i;
+                    }
+                }
+                return this.selectElement.options.length; // Mặc định là cuối danh sách
+            }
+
+            // Kiểm tra xem tùy chọn đã tồn tại chưa
+            optionExists(value) {
+                return Array.from(this.selectElement.options)
+                    .some(opt => opt.value === value && opt.textContent === value);
+            }
+
+            // Thêm tùy chọn mới
+            addCustomOption(value) {
+                if (!value.trim() || this.optionExists(value)) return;
+
+                try {
+                    // Thêm vào dropdown
+                    const customOptionPosition = this.getCustomOptionPosition();
+                    const optElement = document.createElement('option');
+                    optElement.value = value;
+                    optElement.textContent = value;
+                    optElement.classList.add('user-added');
+
+                    this.selectElement.insertBefore(optElement, this.selectElement.options[customOptionPosition]);
+
+                    // Chọn tùy chọn mới
+                    this.selectElement.value = value;
+
+                    // Lưu vào localStorage
+                    const savedOptions = JSON.parse(localStorage.getItem(this.storageKey)) || [];
+                    if (!savedOptions.includes(value)) {
+                        savedOptions.push(value);
+                        localStorage.setItem(this.storageKey, JSON.stringify(savedOptions));
+                    }
+
+                    // Ẩn ô input tùy chỉnh
+                    this.customInput.classList.add('hidden');
+                } catch (error) {
+                    console.error(`Lỗi khi thêm tùy chọn mới cho ${this.selectId}:`, error);
+                }
+            }
+        }
+
+        // Khởi tạo quản lý bảng kê công nợ khi DOM đã được tải
+        document.addEventListener('DOMContentLoaded', function () {
+            const bangKeCongNoManager = new BangKeCongNoManager(appId, accessKey);
+        });
+    </script>
+</body>
+
+</html>
