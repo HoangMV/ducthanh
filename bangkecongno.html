@@ -1120,7 +1120,6 @@
                             newRow.dataset.ngayChi = formattedNgayChi;
                             newRow.dataset.soTienChi = soTienChi;
                             newRow.dataset.ghiChu = ghiChu;
-                            newRow.dataset.lichSuCapNhat = this.formatDate(new Date()) + ' - Tạo mới (nhập)';
 
                             // Tìm tên đơn hàng để hiển thị
                             let displayIdDonHang = idDonHang;
@@ -1482,7 +1481,6 @@
                             newRow.dataset.ngayChi = formattedNgayChi;
                             newRow.dataset.soTienChi = soTienChi;
                             newRow.dataset.ghiChu = ghiChu;
-                            newRow.dataset.lichSuCapNhat = this.formatDate(new Date()) + ' - Tạo mới (nhập)';
                             newRow.dataset.hasError = hasError;
                             newRow.dataset.errorMessages = JSON.stringify(errorMessages);
 
@@ -1705,6 +1703,9 @@
 
                     console.log(`Đã tải ${this.donHangList?.length || 0} đơn hàng và ${this.allHangHoaList?.length || 0} hàng hóa để mapping`);
 
+                    // Hiển thị thông tin người dùng hiện tại
+                    this.displayCurrentUserInfo();
+
                     // Đặt nhân viên từ tham số URL làm giá trị được chọn trong dropdown
                     this.setEmployeeFromUrl();
 
@@ -1797,9 +1798,6 @@
                 // Xóa ID nếu có để tạo bản ghi mới
                 delete newRow.dataset.idChiPhi;
 
-                // Cập nhật lịch sử
-                newRow.dataset.lichSuCapNhat = this.formatDate(new Date()) + ' - Tạo mới (sao chép)';
-
                 // Chèn sau hàng hiện tại
                 row.parentNode.insertBefore(newRow, row.nextSibling);
 
@@ -1884,87 +1882,6 @@
                     });
                 }
             }
-
-            // // Cập nhật phương thức loadChiPhiForBangKe
-            // async loadChiPhiForBangKe(bangKeId) {
-            //     try {
-            //         this.showLoading('Đang tải chi tiết chi phí...');
-
-            //         const response = await axios({
-            //             method: 'POST',
-            //             url: `https://www.appsheet.com/api/v2/apps/${this.appId}/tables/Chi phí sản xuất/Action`,
-            //             headers: {
-            //                 'ApplicationAccessKey': this.accessKey,
-            //                 'Content-Type': 'application/json'
-            //             },
-            //             data: {
-            //                 "Action": "Find",
-            //                 "Properties": {
-            //                     "Locale": "vi-VN",
-            //                     "Timezone": "Asia/Ho_Chi_Minh",
-            //                     "Selector": `Filter(Chi phí sản xuất, [ID bảng kê công nợ phải trả] = "${bangKeId}")`
-            //                 }
-            //             }
-            //         });
-
-            //         let chiPhiList = [];
-            //         if (response.data && response.data.Rows) {
-            //             chiPhiList = response.data.Rows;
-            //         } else if (Array.isArray(response.data)) {
-            //             chiPhiList = response.data;
-            //         }
-
-            //         // Xóa các hàng hiện tại
-            //         document.getElementById('chiTietTableBody').innerHTML = '';
-
-            //         // Hiển thị phần chi tiết nếu có dữ liệu
-            //         if (chiPhiList.length > 0) {
-            //             document.getElementById('chiTietSection').classList.remove('hidden');
-
-            //             // Tải thông tin đơn hàng trước khi thêm chi phí
-            //             await this.preloadOrdersAndProducts(chiPhiList);
-
-            //             // Thêm từng chi phí vào bảng
-            //             chiPhiList.forEach(chiPhi => {
-            //                 this.addExistingChiPhiRow(chiPhi);
-            //             });
-
-            //             // Cập nhật tổng tiền
-            //             this.updateOrderTotals();
-            //         }
-
-            //         this.hideLoading();
-            //     } catch (error) {
-            //         console.error('Lỗi khi tải chi tiết chi phí:', error);
-            //         this.hideLoading();
-            //     }
-            // }
-
-            // Phương thức mới để tải trước thông tin đơn hàng và hàng hóa
-            async preloadOrdersAndProducts(chiPhiList) {
-                try {
-                    // Tạo danh sách các ID đơn hàng độc nhất cần tải
-                    const orderIds = [...new Set(chiPhiList.map(cp => cp['ID đơn hàng']).filter(id => id))];
-
-                    if (orderIds.length === 0) return;
-
-                    // Nếu chưa có danh sách đơn hàng, tải chúng trước
-                    if (!this.donHangList || this.donHangList.length === 0) {
-                        await this.loadDonHangList();
-                    }
-
-                    // Với mỗi đơn hàng, tải danh sách hàng hóa
-                    for (const orderId of orderIds) {
-                        if (orderId) {
-                            await this.loadHangHoaForDonHang(orderId);
-                        }
-                    }
-                } catch (error) {
-                    console.error('Lỗi khi tải trước thông tin đơn hàng và hàng hoá:', error);
-                }
-            }
-
-            // Add this to your BangKeCongNoManager class
 
             // Load order list
             async loadDonHangList() {
@@ -2331,168 +2248,7 @@
                     }
                 });
             }
-
-            // Phương thức thêm hàng chi phí hiện có
-            // Phương thức thêm hàng chi phí hiện có
-            addExistingChiPhiRow(chiPhi) {
-                const tableBody = document.getElementById('chiTietTableBody');
-                const newRow = document.createElement('tr');
-                newRow.classList.add('animate-fade-in');
-
-                // Thiết lập data attributes
-                newRow.dataset.loaiChiPhi = chiPhi['Loại chi phí'] || '';
-                newRow.dataset.hinhThucChi = chiPhi['Hình thức chi'] || '';
-                newRow.dataset.phuongThucTT = chiPhi['Phương thức thanh toán'] || '';
-                newRow.dataset.soTienChi = chiPhi['Số tiền chi'] || 0;
-                newRow.dataset.ngayChi = chiPhi['Ngày chi'] ? this.formatDateForInput(chiPhi['Ngày chi']) : '';
-                newRow.dataset.ghiChu = chiPhi['Ghi chú'] || '';
-                newRow.dataset.idDonHang = chiPhi['ID đơn hàng'] || '';
-                newRow.dataset.idHangHoa = chiPhi['ID hàng hoá'] || '';
-                newRow.dataset.nguoiDeXuat = chiPhi['Người đề xuất chi'] || '';
-                newRow.dataset.lichSuCapNhat = chiPhi['Lịch sử cập nhật'] || '';
-                newRow.dataset.idChiPhi = chiPhi['ID chi phí'] || '';
-
-                // Lấy tên hiển thị cho ID đơn hàng từ danh sách đơn hàng
-                let displayIdDonHang = newRow.dataset.idDonHang;
-                if (this.donHangList && newRow.dataset.idDonHang) {
-                    const donHang = this.donHangList.find(dh =>
-                        (dh['ID đơn hàng'] || dh.ID) === newRow.dataset.idDonHang);
-                    if (donHang && donHang['Mã đơn hàng']) {
-                        displayIdDonHang = donHang['Mã đơn hàng'];
-                        if (donHang['Tên đơn hàng']) {
-                            displayIdDonHang += ` || ${donHang['Tên đơn hàng']}`;
-                        }
-                    }
-                }
-
-                // Lấy tên hiển thị cho ID hàng hóa
-                let displayIdHangHoa = newRow.dataset.idHangHoa;
-
-                // Tạo nội dung HTML cho hàng
-                newRow.innerHTML = `
-    <td class="py-3 px-4 border-b border-gray-200">
-      <button type="button" class="text-blue-600 hover:text-blue-800" onclick="openChiPhiDetail(this)">
-        <i class="fas fa-edit"></i>
-      </button>
-    </td>
-    <td class="py-3 px-4 border-b border-gray-200">${displayIdDonHang}</td>
-    <td class="py-3 px-4 border-b border-gray-200">${displayIdHangHoa}</td>
-    <td class="py-3 px-4 border-b border-gray-200">
-      <select class="w-full p-2 border border-gray-300 rounded-lg hinh-thuc-chi">
-        <option value="">-- Chọn --</option>
-        <option value="Chi trực tiếp" ${chiPhi['Hình thức chi'] === 'Chi trực tiếp' ? 'selected' : ''}>Chi trực tiếp</option>
-        <option value="Chi theo bảng kê" ${chiPhi['Hình thức chi'] === 'Chi theo bảng kê' ? 'selected' : ''}>Chi theo bảng kê</option>
-      </select>
-    </td>
-    <td class="py-3 px-4 border-b border-gray-200">
-      <select class="w-full p-2 border border-gray-300 rounded-lg loai-chi-phi">
-        <option value="">-- Chọn --</option>
-        <option value="Vật tư" ${chiPhi['Loại chi phí'] === 'Vật tư' ? 'selected' : ''}>Vật tư</option>
-        <option value="Gia công" ${chiPhi['Loại chi phí'] === 'Gia công' ? 'selected' : ''}>Gia công</option>
-        <option value="Vận chuyển" ${chiPhi['Loại chi phí'] === 'Vận chuyển' ? 'selected' : ''}>Vận chuyển</option>
-        <option value="In ấn" ${chiPhi['Loại chi phí'] === 'In ấn' ? 'selected' : ''}>In ấn</option>
-        <option value="Làm khuôn" ${chiPhi['Loại chi phí'] === 'Làm khuôn' ? 'selected' : ''}>Làm khuôn</option>
-        <option value="In nhanh" ${chiPhi['Loại chi phí'] === 'In nhanh' ? 'selected' : ''}>In nhanh</option>
-        <option value="Thiết kế" ${chiPhi['Loại chi phí'] === 'Thiết kế' ? 'selected' : ''}>Thiết kế</option>
-        <option value="Khác" ${chiPhi['Loại chi phí'] === 'Khác' ? 'selected' : ''}>Khác</option>
-        ${!['Vật tư', 'Gia công', 'Vận chuyển', 'In ấn', 'Làm khuôn', 'In nhanh', 'Thiết kế', 'Khác', ''].includes(chiPhi['Loại chi phí']) ?
-                        `<option value="${chiPhi['Loại chi phí']}" selected>${chiPhi['Loại chi phí']}</option>` : ''}
-      </select>
-    </td>
-    <td class="py-3 px-4 border-b border-gray-200">
-      <select class="w-full p-2 border border-gray-300 rounded-lg phuong-thuc-tt">
-        <option value="">-- Chọn --</option>
-        <option value="MB" ${chiPhi['Phương thức thanh toán'] === 'MB' ? 'selected' : ''}>MB Ngân hàng Quân Đội (MB Bank)</option>
-        <option value="VP" ${chiPhi['Phương thức thanh toán'] === 'VP' ? 'selected' : ''}>VP Ngân hàng VPBank</option>
-        <option value="Grab" ${chiPhi['Phương thức thanh toán'] === 'Grab' ? 'selected' : ''}>Grab</option>
-      </select>
-    </td>
-    <td class="py-3 px-4 border-b border-gray-200">
-      <select class="w-full p-2 border border-gray-300 rounded-lg nguoi-de-xuat">
-        <option value="">-- Chọn --</option>
-        <!-- Sẽ được điền bởi JavaScript -->
-      </select>
-    </td>
-    <td class="py-3 px-4 border-b border-gray-200">
-      <input type="date" class="w-full p-2 border border-gray-300 rounded-lg ngay-chi" 
-        value="${newRow.dataset.ngayChi}">
-    </td>
-    <td class="py-3 px-4 border-b border-gray-200">
-      <input type="number" class="w-full p-2 border border-gray-300 rounded-lg so-tien-chi" 
-          min="0" step="1000" value="${chiPhi['Số tiền chi'] || 0}">
-    </td>
-    <td class="py-3 px-4 border-b border-gray-200">
-      <div class="flex space-x-2">
-        <button type="button" class="text-green-500 hover:text-green-700" onclick="copyRow(this)">
-          <i class="fas fa-copy"></i>
-        </button>
-        <button type="button" class="text-red-500 hover:text-red-700" onclick="deleteRow(this)">
-          <i class="fas fa-trash"></i>
-        </button>
-      </div>
-    </td>
-    `;
-
-                tableBody.appendChild(newRow);
-
-                // Điền danh sách nhân viên vào dropdown người đề xuất
-                const nguoiDeXuatSelect = newRow.querySelector('.nguoi-de-xuat');
-                if (nguoiDeXuatSelect && this.nhanVienList) {
-                    this.nhanVienList.forEach(nhanVien => {
-                        if (nhanVien['Tên nhân viên']) {
-                            const option = document.createElement('option');
-                            option.value = nhanVien['ID nhân viên'] || nhanVien.ID;
-                            let displayName = nhanVien['Tên nhân viên'];
-                            if (nhanVien['Mã nhân viên']) {
-                                displayName = `${nhanVien['Mã nhân viên']} - ${displayName}`;
-                            }
-                            option.textContent = displayName;
-                            nguoiDeXuatSelect.appendChild(option);
-                        }
-                    });
-
-                    // Chọn người đề xuất chi từ dữ liệu
-                    if (chiPhi['Người đề xuất chi']) {
-                        nguoiDeXuatSelect.value = chiPhi['Người đề xuất chi'];
-                    }
-                }
-
-                // Thêm sự kiện cho input số tiền để tính toán
-                const soTienChiInput = newRow.querySelector('.so-tien-chi');
-                if (soTienChiInput) {
-                    soTienChiInput.addEventListener('input', () => this.calculateRowValues(newRow));
-                    soTienChiInput.addEventListener('input', () => this.updateOrderTotals());
-                }
-
-                // Thêm sự kiện cho trường ngày
-                const ngayChiInput = newRow.querySelector('.ngay-chi');
-                if (ngayChiInput) {
-                    ngayChiInput.addEventListener('change', (e) => {
-                        newRow.dataset.ngayChi = e.target.value;
-                    });
-                }
-
-                // Thêm sự kiện cho các trường select
-                newRow.querySelector('.hinh-thuc-chi').addEventListener('change', (e) => {
-                    newRow.dataset.hinhThucChi = e.target.value;
-                });
-
-                newRow.querySelector('.loai-chi-phi').addEventListener('change', (e) => {
-                    newRow.dataset.loaiChiPhi = e.target.value;
-                });
-
-                newRow.querySelector('.phuong-thuc-tt').addEventListener('change', (e) => {
-                    newRow.dataset.phuongThucTT = e.target.value;
-                });
-
-                newRow.querySelector('.nguoi-de-xuat').addEventListener('change', (e) => {
-                    newRow.dataset.nguoiDeXuat = e.target.value;
-                });
-
-                this.calculateRowValues(newRow);
-            }
-
-
+            
             // Cập nhật phương thức loadExistingBangKeList để điền vào dropdown tùy chỉnh
             async loadExistingBangKeList() {
                 try {
@@ -2927,6 +2683,22 @@
             // Tạo ID cho chi phí
             generateChiPhiID(maBangKe, index) {
                 return `${maBangKe}-CP${String(index).padStart(3, '0')}`;
+            }
+
+            // Thêm phương thức này vào class BangKeCongNoManager
+            displayCurrentUserInfo() {
+                if (this.employeeName && this.nhanVienList) {
+                    const foundEmployee = this.nhanVienList.find(nv =>
+                        nv['Tên nhân viên'] === this.employeeName ||
+                        (nv['Mã nhân viên'] && nv['Mã nhân viên'] + ' - ' + nv['Tên nhân viên'] === this.employeeName)
+                    );
+
+                    if (foundEmployee) {
+                        console.log('Current user:', this.employeeName, 'ID:', foundEmployee['ID nhân viên'] || foundEmployee.ID);
+                    } else {
+                        console.warn('Không tìm thấy ID cho nhân viên:', this.employeeName);
+                    }
+                }
             }
 
             // Hiển thị loading
@@ -3397,6 +3169,19 @@
                 const chiPhiRows = document.querySelectorAll('#chiTietTableBody tr');
                 const chiPhiItems = [];
 
+                // Tìm ID của nhân viên từ tên được truyền trong URL
+                let nguoiTaoId = '';
+                if (this.employeeName && this.nhanVienList) {
+                    const foundEmployee = this.nhanVienList.find(nv =>
+                        nv['Tên nhân viên'] === this.employeeName ||
+                        (nv['Mã nhân viên'] && nv['Mã nhân viên'] + ' - ' + nv['Tên nhân viên'] === this.employeeName)
+                    );
+
+                    if (foundEmployee) {
+                        nguoiTaoId = foundEmployee['ID nhân viên'] || foundEmployee.ID;
+                    }
+                }
+
                 chiPhiRows.forEach((row, index) => {
                     // Lấy các giá trị từ hàng hiện tại
                     const hinhThucChi = row.querySelector('.hinh-thuc-chi').value;
@@ -3430,8 +3215,7 @@
                         'Người đề xuất chi': nguoiDeXuat,
                         'Số tiền chi': soTienChi,
                         'Ghi chú': ghiChu,
-                        'Lịch sử cập nhật': row.dataset.lichSuCapNhat || (this.formatDate(new Date()) + ' - Tạo mới'),
-                        'Người tạo': this.employeeName
+                        'Người tạo': nguoiTaoId
                     };
 
                     chiPhiItems.push(chiPhiItem);
@@ -3460,6 +3244,19 @@
                     // Tạo promise toast thay vì loading overlay
                     const savePromise = new Promise(async (resolve, reject) => {
                         try {
+                            // Tìm ID của nhân viên từ tên được truyền trong URL
+                            let nguoiTaoId = '';
+                            if (this.employeeName && this.nhanVienList) {
+                                const foundEmployee = this.nhanVienList.find(nv =>
+                                    nv['Tên nhân viên'] === this.employeeName ||
+                                    (nv['Mã nhân viên'] && nv['Mã nhân viên'] + ' - ' + nv['Tên nhân viên'] === this.employeeName)
+                                );
+
+                                if (foundEmployee) {
+                                    nguoiTaoId = foundEmployee['ID nhân viên'] || foundEmployee.ID;
+                                }
+                            }
+
                             // Thu thập dữ liệu bảng kê
                             const bangKeData = {
                                 'ID bảng kê công nợ phải trả': maBangKe,
@@ -3470,7 +3267,7 @@
                                 'Ngày chi': document.getElementById('ngayChi').value,
                                 'Người chi': document.getElementById('nguoiChi').value,
                                 'Ngày tạo': ngayTao,
-                                'Người tạo': this.employeeName
+                                'Người tạo': nguoiTaoId // Dùng ID thay vì tên
                             };
 
                             // Tạo payload cho bảng kê
@@ -3696,13 +3493,6 @@
                     this.currentEditingRow.dataset.loaiChiPhi = loaiChiPhi;
                     this.currentEditingRow.dataset.phuongThucTT = phuongThucTT;
                     this.currentEditingRow.dataset.nguoiDeXuat = nguoiDeXuat;
-
-                    // Cập nhật lịch sử cập nhật
-                    const currentDate = this.formatDate(new Date());
-                    const currentHistory = this.currentEditingRow.dataset.lichSuCapNhat || '';
-                    this.currentEditingRow.dataset.lichSuCapNhat = currentHistory
-                        ? `${currentHistory}, ${currentDate} - Cập nhật`
-                        : `${currentDate} - Cập nhật`;
 
                     // Cập nhật tính toán
                     this.calculateRowValues(this.currentEditingRow);
