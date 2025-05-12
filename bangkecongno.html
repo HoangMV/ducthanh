@@ -1337,6 +1337,335 @@
                 }
             }
 
+            // Thêm phương thức này vào class BangKeCongNoManager
+            // Cập nhật phương thức importDataFromExcel trong class BangKeCongNoManager
+            async importDataFromExcel() {
+                try {
+                    const jsonDataStr = document.getElementById('importModal').dataset.jsonData;
+                    if (!jsonDataStr) {
+                        throw new Error('Không có dữ liệu để nhập. Vui lòng chọn file lại.');
+                    }
+
+                    this.showLoading('Đang nhập dữ liệu...');
+
+                    const jsonData = JSON.parse(jsonDataStr);
+
+                    // Headers nằm ở dòng đầu tiên
+                    const headers = jsonData[0];
+                    const dataRows = jsonData.slice(1);
+
+                    // Tìm vị trí cột
+                    const colIndexes = {
+                        idDonHang: headers.findIndex(h => /id.*đơn|đơn.*hàng|mã.*đơn|mã.*hàng/i.test(h)),
+                        idHangHoa: headers.findIndex(h => /id.*hàng|hàng.*hóa|hàng.*hoá|tên.*hàng/i.test(h)),
+                        hinhThucChi: headers.findIndex(h => /hình.*thức|chi.*trả/i.test(h)),
+                        loaiChiPhi: headers.findIndex(h => /loại.*chi/i.test(h)),
+                        phuongThucTT: headers.findIndex(h => /phương.*thức|thanh.*toán/i.test(h)),
+                        nguoiDeXuat: headers.findIndex(h => /người.*xuất|đề.*xuất/i.test(h)),
+                        ngayChi: headers.findIndex(h => /ngày.*chi/i.test(h)),
+                        soTienChi: headers.findIndex(h => /số.*tiền|tiền.*chi/i.test(h)),
+                        ghiChu: headers.findIndex(h => /ghi.*chú/i.test(h))
+                    };
+
+                    // Kiểm tra cột bắt buộc
+                    if (colIndexes.idDonHang === -1 || colIndexes.hinhThucChi === -1 ||
+                        colIndexes.loaiChiPhi === -1 || colIndexes.soTienChi === -1) {
+                        throw new Error('File thiếu các cột bắt buộc (Mã đơn hàng, Hình thức chi, Loại chi phí hoặc Số tiền chi).');
+                    }
+
+                    // Hiển thị phần chi tiết
+                    document.getElementById('chiTietSection').classList.remove('hidden');
+
+                    let importCount = 0;
+                    let errorCount = 0;
+                    const errorDetails = []; // Lưu chi tiết lỗi
+
+                    // Tạo mapping
+                    const donHangMap = new Map();
+                    if (this.donHangList && this.donHangList.length > 0) {
+                        this.donHangList.forEach(donHang => {
+                            if (donHang['Mã đơn hàng'] && donHang['ID đơn hàng']) {
+                                donHangMap.set(donHang['Mã đơn hàng'].toLowerCase(), donHang['ID đơn hàng']);
+                            } else if (donHang['Mã đơn hàng'] && donHang.ID) {
+                                donHangMap.set(donHang['Mã đơn hàng'].toLowerCase(), donHang.ID);
+                            }
+                        });
+                    }
+
+                    const hangHoaMap = new Map();
+                    if (this.allHangHoaList && this.allHangHoaList.length > 0) {
+                        this.allHangHoaList.forEach(hangHoa => {
+                            if (hangHoa['Tên hàng hoá'] && hangHoa['ID hàng hoá']) {
+                                hangHoaMap.set(hangHoa['Tên hàng hoá'].toLowerCase(), hangHoa['ID hàng hoá']);
+                            } else if (hangHoa['Tên hàng hoá'] && hangHoa.ID) {
+                                hangHoaMap.set(hangHoa['Tên hàng hoá'].toLowerCase(), hangHoa.ID);
+                            }
+                        });
+                    }
+
+                    // Xử lý từng dòng
+                    dataRows.forEach((row, rowIndex) => {
+                        try {
+                            const getValue = (index, defaultValue) => {
+                                return index !== -1 && row[index] !== undefined ? row[index] : defaultValue;
+                            };
+
+                            const maDonHang = getValue(colIndexes.idDonHang, '');
+                            const tenHangHoa = getValue(colIndexes.idHangHoa, '');
+                            const hinhThucChi = getValue(colIndexes.hinhThucChi, '');
+                            const loaiChiPhi = getValue(colIndexes.loaiChiPhi, '');
+                            const phuongThucTT = getValue(colIndexes.phuongThucTT, '');
+                            const nguoiDeXuat = getValue(colIndexes.nguoiDeXuat, '');
+                            const ngayChi = getValue(colIndexes.ngayChi, this.formatDate(new Date()));
+                            const soTienChi = parseFloat(getValue(colIndexes.soTienChi, 0)) || 0;
+                            const ghiChu = getValue(colIndexes.ghiChu, '');
+
+                            // Bỏ qua dòng trống
+                            if (!maDonHang || !hinhThucChi || !loaiChiPhi || !soTienChi) {
+                                return;
+                            }
+
+                            // Kiểm tra và chuyển đổi ID với thông báo lỗi chi tiết
+                            let idDonHang = maDonHang;
+                            let idHangHoa = tenHangHoa;
+                            let hasError = false;
+                            let errorMessages = [];
+
+                            // Kiểm tra Mã đơn hàng
+                            if (maDonHang && !donHangMap.has(maDonHang.toLowerCase())) {
+                                hasError = true;
+                                errorMessages.push(`Mã đơn hàng "${maDonHang}" không tồn tại trong hệ thống`);
+                            } else if (maDonHang) {
+                                idDonHang = donHangMap.get(maDonHang.toLowerCase());
+                            }
+
+                            // Kiểm tra Tên hàng hóa
+                            if (tenHangHoa && !hangHoaMap.has(tenHangHoa.toLowerCase())) {
+                                hasError = true;
+                                errorMessages.push(`Tên hàng hóa "${tenHangHoa}" không tồn tại trong hệ thống`);
+                            } else if (tenHangHoa) {
+                                idHangHoa = hangHoaMap.get(tenHangHoa.toLowerCase());
+                            }
+
+                            // Format ngày
+                            let formattedNgayChi = ngayChi;
+                            if (typeof ngayChi === 'string' && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(ngayChi)) {
+                                const parts = ngayChi.split('/');
+                                formattedNgayChi = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+                            } else if (ngayChi instanceof Date) {
+                                formattedNgayChi = this.formatDate(ngayChi);
+                            }
+
+                            // Tạo hàng
+                            const tableBody = document.getElementById('chiTietTableBody');
+                            const newRow = document.createElement('tr');
+                            newRow.classList.add('animate-fade-in');
+
+                            // Nếu có lỗi, thêm class đánh dấu
+                            if (hasError) {
+                                newRow.classList.add('bg-red-50', 'border-red-300');
+                                errorDetails.push({
+                                    row: rowIndex + 2, // +2 vì header là dòng 1
+                                    errors: errorMessages,
+                                    maDonHang: maDonHang,
+                                    tenHangHoa: tenHangHoa
+                                });
+                            }
+
+                            // Lưu data attributes
+                            newRow.dataset.idDonHang = idDonHang;
+                            newRow.dataset.idHangHoa = idHangHoa;
+                            newRow.dataset.loaiChiPhi = loaiChiPhi;
+                            newRow.dataset.hinhThucChi = hinhThucChi;
+                            newRow.dataset.phuongThucTT = phuongThucTT;
+                            newRow.dataset.nguoiDeXuat = nguoiDeXuat;
+                            newRow.dataset.ngayChi = formattedNgayChi;
+                            newRow.dataset.soTienChi = soTienChi;
+                            newRow.dataset.ghiChu = ghiChu;
+                            newRow.dataset.lichSuCapNhat = this.formatDate(new Date()) + ' - Tạo mới (nhập)';
+                            newRow.dataset.hasError = hasError;
+                            newRow.dataset.errorMessages = JSON.stringify(errorMessages);
+
+                            // Tạo HTML với thông báo lỗi nếu có
+                            newRow.innerHTML = `
+<td class="py-3 px-4 border-b border-gray-200">
+  <button type="button" class="text-blue-600 hover:text-blue-800" onclick="openChiPhiDetail(this)">
+    <i class="fas fa-edit"></i>
+  </button>
+  ${hasError ? `
+  <button type="button" class="text-red-600 hover:text-red-800 ml-2" onclick="showRowError(this)" title="Xem lỗi">
+    <i class="fas fa-exclamation-triangle"></i>
+  </button>` : ''}
+</td>
+<td class="py-3 px-4 border-b border-gray-200 ${hasError && errorMessages.some(msg => msg.includes('Mã đơn hàng')) ? 'text-red-600 font-semibold' : ''}">
+    ${maDonHang}
+    ${hasError && errorMessages.some(msg => msg.includes('Mã đơn hàng')) ?
+                                    '<br><span class="text-xs text-red-500">⚠ Không tìm thấy</span>' : ''}
+</td>
+<td class="py-3 px-4 border-b border-gray-200 ${hasError && errorMessages.some(msg => msg.includes('Tên hàng hóa')) ? 'text-red-600 font-semibold' : ''}">
+    ${tenHangHoa}
+    ${hasError && errorMessages.some(msg => msg.includes('Tên hàng hóa')) ?
+                                    '<br><span class="text-xs text-red-500">⚠ Không tìm thấy</span>' : ''}
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <select class="w-full p-2 border border-gray-300 rounded-lg hinh-thuc-chi">
+    <option value="">-- Chọn --</option>
+    <option value="Chi trực tiếp" ${hinhThucChi === 'Chi trực tiếp' ? 'selected' : ''}>Chi trực tiếp</option>
+    <option value="Chi theo bảng kê" ${hinhThucChi === 'Chi theo bảng kê' ? 'selected' : ''}>Chi theo bảng kê</option>
+    ${hinhThucChi && !['Chi trực tiếp', 'Chi theo bảng kê'].includes(hinhThucChi) ?
+                                    `<option value="${hinhThucChi}" selected>${hinhThucChi}</option>` : ''}
+  </select>
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <select class="w-full p-2 border border-gray-300 rounded-lg loai-chi-phi">
+    <option value="">-- Chọn --</option>
+    <option value="Vật tư" ${loaiChiPhi === 'Vật tư' ? 'selected' : ''}>Vật tư</option>
+    <option value="Gia công" ${loaiChiPhi === 'Gia công' ? 'selected' : ''}>Gia công</option>
+    <option value="Vận chuyển" ${loaiChiPhi === 'Vận chuyển' ? 'selected' : ''}>Vận chuyển</option>
+    <option value="In ấn" ${loaiChiPhi === 'In ấn' ? 'selected' : ''}>In ấn</option>
+    <option value="Làm khuôn" ${loaiChiPhi === 'Làm khuôn' ? 'selected' : ''}>Làm khuôn</option>
+    <option value="In nhanh" ${loaiChiPhi === 'In nhanh' ? 'selected' : ''}>In nhanh</option>
+    <option value="Thiết kế" ${loaiChiPhi === 'Thiết kế' ? 'selected' : ''}>Thiết kế</option>
+    <option value="Khác" ${loaiChiPhi === 'Khác' ? 'selected' : ''}>Khác</option>
+    ${loaiChiPhi && !['Vật tư', 'Gia công', 'Vận chuyển', 'In ấn', 'Làm khuôn', 'In nhanh', 'Thiết kế', 'Khác'].includes(loaiChiPhi) ?
+                                    `<option value="${loaiChiPhi}" selected>${loaiChiPhi}</option>` : ''}
+  </select>
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <select class="w-full p-2 border border-gray-300 rounded-lg phuong-thuc-tt">
+    <option value="">-- Chọn --</option>
+    <option value="MB" ${phuongThucTT === 'MB' ? 'selected' : ''}>MB Bank - CN Gia Lâm. STK: 6666.939.8888 - Đỗ Trọng Nghĩa</option>
+    <option value="VP" ${phuongThucTT === 'VP' ? 'selected' : ''}>VPBank - CN Thăng Long. STK: 156939258 - DUC THANH SERPRO</option>
+    <option value="Grab" ${phuongThucTT === 'Grab' ? 'selected' : ''}>Grab</option>
+    ${phuongThucTT && !['MB', 'VP', 'Grab', ''].includes(phuongThucTT) ?
+                                    `<option value="${phuongThucTT}" selected>${phuongThucTT}</option>` : ''}
+  </select>
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <select class="w-full p-2 border border-gray-300 rounded-lg nguoi-de-xuat">
+    <option value="">-- Chọn --</option>
+  </select>
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <input type="date" class="w-full p-2 border border-gray-300 rounded-lg ngay-chi" 
+      value="${formattedNgayChi}">
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <input type="number" class="w-full p-2 border border-gray-300 rounded-lg so-tien-chi" 
+      min="0" step="1000" value="${soTienChi}">
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <div class="flex space-x-2">
+    <button type="button" class="text-green-500 hover:text-green-700" onclick="copyRow(this)">
+      <i class="fas fa-copy"></i>
+    </button>
+    <button type="button" class="text-red-500 hover:text-red-700" onclick="deleteRow(this)">
+      <i class="fas fa-trash"></i>
+    </button>
+  </div>
+</td>
+`;
+                            tableBody.appendChild(newRow);
+
+                            // Điền dropdown nhân viên
+                            const nguoiDeXuatSelect = newRow.querySelector('.nguoi-de-xuat');
+                            if (nguoiDeXuatSelect && this.nhanVienList) {
+                                this.nhanVienList.forEach(nhanVien => {
+                                    if (nhanVien['Tên nhân viên']) {
+                                        const option = document.createElement('option');
+                                        option.value = nhanVien['ID nhân viên'] || nhanVien.ID;
+                                        let displayName = nhanVien['Tên nhân viên'];
+                                        if (nhanVien['Mã nhân viên']) {
+                                            displayName = `${nhanVien['Mã nhân viên']} - ${displayName}`;
+                                        }
+                                        option.textContent = displayName;
+                                        nguoiDeXuatSelect.appendChild(option);
+                                    }
+                                });
+
+                                // Set nhân viên
+                                if (nguoiDeXuat) {
+                                    nguoiDeXuatSelect.value = nguoiDeXuat;
+                                } else if (this.employeeName) {
+                                    const foundEmployee = this.nhanVienList.find(nv =>
+                                        nv['Tên nhân viên'] === this.employeeName
+                                    );
+                                    if (foundEmployee) {
+                                        nguoiDeXuatSelect.value = foundEmployee['ID nhân viên'] || foundEmployee.ID;
+                                    }
+                                }
+                            }
+
+                            // Event listeners
+                            this.attachRowEventListeners(newRow);
+                            this.calculateRowValues(newRow);
+                            importCount++;
+
+                            if (hasError) {
+                                errorCount++;
+                            }
+                        } catch (rowError) {
+                            console.error('Lỗi nhập dòng:', rowError, row);
+                            errorCount++;
+                        }
+                    });
+
+                    // Cập nhật totals
+                    this.updateOrderTotals();
+                    this.updateProgressSteps(2);
+
+                    // Đóng modal
+                    this.closeImportModal();
+                    this.hideLoading();
+
+                    // Hiển thị kết quả với chi tiết lỗi
+                    let resultMessage = `Đã nhập ${importCount} chi phí từ Excel.`;
+
+                    if (errorDetails.length > 0) {
+                        resultMessage += `\n\n⚠ Phát hiện ${errorDetails.length} dòng có lỗi:`;
+
+                        // Hiển thị chi tiết lỗi
+                        const errorDetailHtml = errorDetails.map(error => `
+                <div class="mb-2 p-2 bg-red-50 rounded">
+                    <div class="font-semibold text-red-700">Dòng ${error.row}:</div>
+                    <ul class="list-disc list-inside ml-4">
+                        ${error.errors.map(msg => `<li class="text-red-600">${msg}</li>`).join('')}
+                    </ul>
+                    <div class="text-sm text-gray-600 mt-1">
+                        Mã đơn hàng: ${error.maDonHang} | Tên hàng hóa: ${error.tenHangHoa}
+                    </div>
+                </div>
+            `).join('');
+
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Nhập dữ liệu với cảnh báo',
+                            html: `
+                    <div class="text-left">
+                        <p class="mb-4">${resultMessage}</p>
+                        <div class="max-h-64 overflow-y-auto">
+                            ${errorDetailHtml}
+                        </div>
+                        <p class="mt-4 text-sm text-gray-500">
+                            Các dòng có lỗi đã được đánh dấu màu đỏ trong bảng. 
+                            Vui lòng kiểm tra và sửa lại thông tin.
+                        </p>
+                    </div>
+                `,
+                            confirmButtonText: 'Đã hiểu',
+                            confirmButtonColor: '#0ea5e9',
+                            width: '600px'
+                        });
+                    } else {
+                        this.showAlert('success', 'Nhập dữ liệu thành công', resultMessage);
+                    }
+
+                } catch (error) {
+                    this.hideLoading();
+                    console.error('Lỗi nhập dữ liệu:', error);
+                    this.showAlert('error', 'Lỗi nhập dữ liệu', error.message || 'Có lỗi xảy ra khi nhập dữ liệu từ Excel.');
+                }
+            }
 
             async init() {
                 try {
@@ -1373,6 +1702,8 @@
                         this.loadDonHangList(), // Add this new method call
                         this.loadAllHangHoaList() // Added this new method call
                     ]);
+
+                    console.log(`Đã tải ${this.donHangList?.length || 0} đơn hàng và ${this.allHangHoaList?.length || 0} hàng hóa để mapping`);
 
                     // Đặt nhân viên từ tham số URL làm giá trị được chọn trong dropdown
                     this.setEmployeeFromUrl();
@@ -2457,6 +2788,28 @@
                 window.closeNhaCungCapModal = () => this.closeNhaCungCapModal();
                 window.copyRow = (btn) => this.copyRow(btn);
                 window.closeImportModal = () => this.closeImportModal(); // Thêm dòng này
+
+                // Thêm hàm này vào window object để có thể gọi từ HTML
+                window.showRowError = function (button) {
+                    const row = button.closest('tr');
+                    const errorMessages = JSON.parse(row.dataset.errorMessages || '[]');
+
+                    if (errorMessages.length > 0) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Chi tiết lỗi',
+                            html: `
+                <div class="text-left">
+                    <ul class="list-disc list-inside">
+                        ${errorMessages.map(msg => `<li class="text-red-600">${msg}</li>`).join('')}
+                    </ul>
+                </div>
+            `,
+                            confirmButtonText: 'Đóng',
+                            confirmButtonColor: '#0ea5e9'
+                        });
+                    }
+                };
             }
 
             // Trong phương thức setupEventListeners() của class BangKeCongNoManager
