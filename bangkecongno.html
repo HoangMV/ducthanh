@@ -412,6 +412,9 @@
                                     Tên hàng hóa</th>
                                 <th
                                     class="py-3 px-4 border-b border-gray-300 bg-gradient-to-r from-blue-50 to-blue-100 font-medium text-gray-700 sticky top-0">
+                                    Nhà cung cấp</th>
+                                <th
+                                    class="py-3 px-4 border-b border-gray-300 bg-gradient-to-r from-blue-50 to-blue-100 font-medium text-gray-700 sticky top-0">
                                     Hình thức chi</th>
                                 <th
                                     class="py-3 px-4 border-b border-gray-300 bg-gradient-to-r from-blue-50 to-blue-100 font-medium text-gray-700 sticky top-0">
@@ -428,6 +431,9 @@
                                 <th
                                     class="py-3 px-4 border-b border-gray-300 bg-gradient-to-r from-blue-50 to-blue-100 font-medium text-gray-700 sticky top-0">
                                     Số tiền chi</th>
+                                <th
+                                    class="py-3 px-4 border-b border-gray-300 bg-gradient-to-r from-blue-50 to-blue-100 font-medium text-gray-700 sticky top-0">
+                                    Bill</th>
                                 <th
                                     class="py-3 px-4 border-b border-gray-300 bg-gradient-to-r from-blue-50 to-blue-100 font-medium text-gray-700 sticky top-0 w-10">
                                     <i class="fas fa-trash text-gray-400"></i>
@@ -562,6 +568,15 @@
                     </div>
 
                     <div class="form-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nhà cung cấp</label>
+                        <select id="modalNhaCungCapChiPhi" class="w-full p-2 border border-gray-300 rounded-lg">
+                            <option value="">-- Chọn nhà cung cấp --</option>
+                            <!-- Sẽ được điền bởi JavaScript -->
+                        </select>
+                    </div>
+
+
+                    <div class="form-group">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Hình thức chi <span
                                 class="text-red-500">*</span></label>
                         <select id="modalHinhThucChi" class="w-full p-2 border border-gray-300 rounded-lg" required>
@@ -622,6 +637,23 @@
                     </div>
 
                     <div class="form-group lg:col-span-3">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Bill (Hình ảnh)</label>
+                        <div class="flex items-center gap-3">
+                            <input type="file" id="modalBillImage" accept="image/*" class="hidden">
+                            <button type="button" id="btnChonBill"
+                                class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2">
+                                <i class="fas fa-upload"></i>
+                                Chọn ảnh
+                            </button>
+                            <span id="billFileName" class="text-sm text-gray-600"></span>
+                        </div>
+                        <div id="billPreview" class="mt-3 hidden">
+                            <img id="billPreviewImage" class="max-w-xs max-h-40 rounded-lg border border-gray-300"
+                                alt="Preview">
+                        </div>
+                    </div>
+
+                    <div class="form-group lg:col-span-3">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Ghi chú</label>
                         <textarea id="modalGhiChu" class="w-full p-2 border border-gray-300 rounded-lg"
                             rows="3"></textarea>
@@ -656,9 +688,8 @@
                 <div class="mb-4">
                     <p class="text-sm text-gray-600 mb-3">
                         Tải lên file Excel (.xlsx, .xls) có chứa dữ liệu chi phí. File cần có các cột: MÃ ĐƠN HÀNG, TÊN
-                        HÀNG HÓA, HÌNH THỨC CHI, LOẠI CHI PHÍ, SỐ TIỀN CHI.
+                        HÀNG HÓA, NHÀ CUNG CẤP, HÌNH THỨC CHI, LOẠI CHI PHÍ, SỐ TIỀN CHI.
                     </p>
-
                     <div class="flex gap-3 mb-4">
                         <button id="btnChonFile"
                             class="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
@@ -725,7 +756,6 @@
             constructor(appId, accessKey) {
                 this.appId = appId;
                 this.accessKey = accessKey;
-                this.bangKeCongNoData = null;
                 this.chiPhiList = [];
                 this.nhaCungCapList = [];
                 this.nhanVienList = [];
@@ -756,8 +786,8 @@
           
           <div class="mb-4">
             <p class="text-sm text-gray-600 mb-3">
-              Tải lên file Excel (.xlsx, .xls) có chứa dữ liệu chi phí. File cần có các cột: MÃ ĐƠN HÀNG, TÊN HÀNG HÓA, HÌNH THỨC CHI, LOẠI CHI PHÍ, SỐ TIỀN CHI.
-            </p>
+    Tải lên file Excel (.xlsx, .xls) có chứa dữ liệu chi phí. File cần có các cột: MÃ ĐƠN HÀNG, TÊN HÀNG HÓA, NHÀ CUNG CẤP, HÌNH THỨC CHI, LOẠI CHI PHÍ, SỐ TIỀN CHI.
+</p>
             
             <div class="flex gap-3 mb-4">
               <button id="btnChonFile" class="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
@@ -962,12 +992,14 @@
                         const wb = XLSX.utils.book_new();
 
                         // Define headers and sample data
-                        const headers = ['Mã đơn hàng', 'Tên hàng hoá', 'Hình thức chi', 'Loại chi phí',
-                            'Phương thức thanh toán', 'Người đề xuất chi', 'Ngày chi', 'Số tiền chi', 'Ghi chú'];
+                        const headers = ['Mã đơn hàng', 'Tên hàng hoá', 'Nhà cung cấp', 'Hình thức chi',
+                            'Loại chi phí', 'Phương thức thanh toán', 'Người đề xuất chi',
+                            'Ngày chi', 'Số tiền chi', 'Ghi chú'];
 
                         const exampleData = [
-                            ['250404TESTLUNGTUNG', 'TEST TEST HÀNG VÍ DỤ', 'Chi trực tiếp', 'Vật tư', 'MB', '', '2023-05-01', 1500000, 'Thanh toán tiền mua vật tư'],
-                            ['250404TESTLUNGTUNG', 'TEST TEST HÀNG', 'Chi theo bảng kê', 'Gia công', 'VP', '', '2023-05-02', 800000, 'Thanh toán tiền gia công']
+                            ['250404TESTLUNGTUNG', 'TEST TEST HÀNG VÍ DỤ', 'Thung Gia Hân', 'Chi trực tiếp', 'Vật tư',
+                                'MB', '', '2023-05-01', 1500000, 'Thanh toán tiền mua vật tư'],
+                            ['250404TESTLUNGTUNG', 'TEST TEST HÀNG', 'Thung Gia Hân', 'Chi theo bảng kê', 'Gia công', 'VP', '', '2023-05-02', 800000, 'Thanh toán tiền gia công']
                         ];
 
                         // Create worksheet
@@ -975,9 +1007,11 @@
                         const ws = XLSX.utils.aoa_to_sheet(wsData);
 
                         // Add column widths
+                        // Cập nhật column widths để khớp với số cột
                         const colWidths = [
-                            { wch: 15 }, // ID đơn hàng
-                            { wch: 20 }, // ID hàng hoá
+                            { wch: 15 }, // Mã đơn hàng
+                            { wch: 20 }, // Tên hàng hoá
+                            { wch: 15 }, // Nhà cung cấp (thêm mới)
                             { wch: 15 }, // Hình thức chi
                             { wch: 15 }, // Loại chi phí
                             { wch: 20 }, // Phương thức thanh toán
@@ -997,300 +1031,6 @@
                 } catch (error) {
                     console.error('Lỗi khi tải mẫu nhập:', error);
                     this.showAlert('error', 'Lỗi', 'Không thể tạo mẫu nhập. Vui lòng thử lại sau.');
-                }
-            }
-
-            // Nhập dữ liệu từ Excel
-            // Nhập dữ liệu từ Excel
-            importDataFromExcel() {
-                try {
-                    const jsonDataStr = document.getElementById('importModal').dataset.jsonData;
-                    if (!jsonDataStr) {
-                        throw new Error('Không có dữ liệu để nhập. Vui lòng chọn file lại.');
-                    }
-
-                    this.showLoading('Đang nhập dữ liệu...');
-
-                    const jsonData = JSON.parse(jsonDataStr);
-
-                    // Headers are in the first row
-                    const headers = jsonData[0];
-                    const dataRows = jsonData.slice(1);
-
-                    // In ra console để debug
-                    console.log("Headers từ Excel:", headers);
-
-                    // Find column indexes based on headers with improved regex patterns
-                    const colIndexes = {
-                        // Sử dụng nhiều mẫu regex để tìm kiếm linh hoạt hơn
-                        idDonHang: headers.findIndex(h => /id.*đơn|đơn.*hàng|mã.*đơn|mã.*hàng/i.test(h)),
-                        idHangHoa: headers.findIndex(h => /id.*hàng|hàng.*hóa|hàng.*hoá|tên.*hàng/i.test(h)),
-                        hinhThucChi: headers.findIndex(h => /hình.*thức|chi.*trả/i.test(h)),
-                        loaiChiPhi: headers.findIndex(h => /loại.*chi/i.test(h)),
-                        phuongThucTT: headers.findIndex(h => /phương.*thức|thanh.*toán/i.test(h)),
-                        nguoiDeXuat: headers.findIndex(h => /người.*xuất|đề.*xuất/i.test(h)),
-                        ngayChi: headers.findIndex(h => /ngày.*chi/i.test(h)),
-                        soTienChi: headers.findIndex(h => /số.*tiền|tiền.*chi/i.test(h)),
-                        ghiChu: headers.findIndex(h => /ghi.*chú/i.test(h))
-                    };
-
-                    // In ra console để debug
-                    console.log("Đã tìm thấy các vị trí cột:", colIndexes);
-
-                    // Kiểm tra các cột bắt buộc
-                    if (colIndexes.idDonHang === -1 || colIndexes.hinhThucChi === -1 ||
-                        colIndexes.loaiChiPhi === -1 || colIndexes.soTienChi === -1) {
-                        console.log("Không tìm thấy một hoặc nhiều cột bắt buộc, tiến hành tìm kiếm bổ sung");
-
-                        // Nếu không tìm được cột đơn hàng, thử lại một lần nữa
-                        if (colIndexes.idDonHang === -1) {
-                            colIndexes.idDonHang = headers.findIndex(h =>
-                                h && h.toLowerCase().includes('đơn') || h && h.toLowerCase().includes('hàng') || h && h.toLowerCase().includes('mã')
-                            );
-                            console.log("Tìm lại cột đơn hàng:", colIndexes.idDonHang);
-                        }
-
-                        // Nếu không tìm được cột hàng hóa, thử lại một lần nữa
-                        if (colIndexes.idHangHoa === -1) {
-                            colIndexes.idHangHoa = headers.findIndex(h =>
-                                h && h.toLowerCase().includes('hàng') || h && h.toLowerCase().includes('tên')
-                            );
-                            console.log("Tìm lại cột hàng hóa:", colIndexes.idHangHoa);
-                        }
-
-                        // Nếu vẫn không tìm thấy các cột bắt buộc, thông báo lỗi
-                        if (colIndexes.idDonHang === -1 || colIndexes.hinhThucChi === -1 ||
-                            colIndexes.loaiChiPhi === -1 || colIndexes.soTienChi === -1) {
-                            throw new Error('File thiếu các cột bắt buộc (Mã đơn hàng/ID đơn hàng, Hình thức chi, Loại chi phí hoặc Số tiền chi).');
-                        }
-                    }
-
-                    // Check if the chiTietSection is hidden and show it
-                    document.getElementById('chiTietSection').classList.remove('hidden');
-
-                    // For statistics
-                    let importCount = 0;
-                    let errorCount = 0;
-
-                    // Add each row to the chi phí table
-                    dataRows.forEach(row => {
-                        try {
-                            // Skip empty rows (check if essential fields are empty)
-                            if (!row[colIndexes.idDonHang] || !row[colIndexes.hinhThucChi] ||
-                                !row[colIndexes.loaiChiPhi] || !row[colIndexes.soTienChi]) {
-                                return;
-                            }
-
-                            // Get values from row based on column indexes
-                            const getValue = (index, defaultValue) => {
-                                return index !== -1 && row[index] !== undefined ? row[index] : defaultValue;
-                            };
-
-                            const idDonHang = getValue(colIndexes.idDonHang, '');
-                            const idHangHoa = getValue(colIndexes.idHangHoa, '');
-                            const hinhThucChi = getValue(colIndexes.hinhThucChi, '');
-                            const loaiChiPhi = getValue(colIndexes.loaiChiPhi, '');
-                            const phuongThucTT = getValue(colIndexes.phuongThucTT, '');
-                            const nguoiDeXuat = getValue(colIndexes.nguoiDeXuat, '');
-                            const ngayChi = getValue(colIndexes.ngayChi, this.formatDate(new Date()));
-                            const soTienChi = parseFloat(getValue(colIndexes.soTienChi, 0)) || 0;
-                            const ghiChu = getValue(colIndexes.ghiChu, '');
-
-                            // Format the date if needed
-                            let formattedNgayChi = ngayChi;
-                            if (typeof ngayChi === 'string' && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(ngayChi)) {
-                                const parts = ngayChi.split('/');
-                                formattedNgayChi = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
-                            } else if (ngayChi instanceof Date) {
-                                formattedNgayChi = this.formatDate(ngayChi);
-                            }
-
-                            // Create a new row
-                            const tableBody = document.getElementById('chiTietTableBody');
-                            const newRow = document.createElement('tr');
-                            newRow.classList.add('animate-fade-in');
-
-                            // Set data attributes
-                            newRow.dataset.idDonHang = idDonHang;
-                            newRow.dataset.idHangHoa = idHangHoa;
-                            newRow.dataset.loaiChiPhi = loaiChiPhi;
-                            newRow.dataset.hinhThucChi = hinhThucChi;
-                            newRow.dataset.phuongThucTT = phuongThucTT;
-                            newRow.dataset.nguoiDeXuat = nguoiDeXuat;
-                            newRow.dataset.ngayChi = formattedNgayChi;
-                            newRow.dataset.soTienChi = soTienChi;
-                            newRow.dataset.ghiChu = ghiChu;
-
-                            // Tìm tên đơn hàng để hiển thị
-                            let displayIdDonHang = idDonHang;
-                            if (this.donHangList && idDonHang) {
-                                const donHang = this.donHangList.find(dh =>
-                                    (dh['ID đơn hàng'] || dh.ID) === idDonHang);
-                                if (donHang && donHang['Mã đơn hàng']) {
-                                    displayIdDonHang = donHang['Mã đơn hàng'];
-                                    // if (donHang['Tên đơn hàng']) {
-                                    //     displayIdDonHang += ` || ${donHang['Tên đơn hàng']}`;
-                                    // }
-                                }
-                            }
-
-                            // Tìm tên hàng hóa để hiển thị
-                            let displayIdHangHoa = idHangHoa;
-                            if (this.allHangHoaList && idHangHoa) {
-                                const hangHoa = this.allHangHoaList.find(hh =>
-                                    (hh['ID hàng hoá'] || hh.ID) === idHangHoa);
-                                if (hangHoa && hangHoa['Tên hàng hoá']) {
-                                    displayIdHangHoa = hangHoa['Tên hàng hoá'];
-                                }
-                            }
-
-                            // Create HTML content for the row
-                            newRow.innerHTML = `
-<td class="py-3 px-4 border-b border-gray-200">
-  <button type="button" class="text-blue-600 hover:text-blue-800" onclick="openChiPhiDetail(this)">
-    <i class="fas fa-edit"></i>
-  </button>
-</td>
-<td class="py-3 px-4 border-b border-gray-200">${displayIdDonHang}</td>
-<td class="py-3 px-4 border-b border-gray-200">${displayIdHangHoa}</td>
-<td class="py-3 px-4 border-b border-gray-200">
-  <select class="w-full p-2 border border-gray-300 rounded-lg hinh-thuc-chi">
-    <option value="">-- Chọn --</option>
-    <option value="Chi trực tiếp" ${hinhThucChi === 'Chi trực tiếp' ? 'selected' : ''}>Chi trực tiếp</option>
-    <option value="Chi theo bảng kê" ${hinhThucChi === 'Chi theo bảng kê' ? 'selected' : ''}>Chi theo bảng kê</option>
-    ${hinhThucChi && !['Chi trực tiếp', 'Chi theo bảng kê'].includes(hinhThucChi) ?
-                                    `<option value="${hinhThucChi}" selected>${hinhThucChi}</option>` : ''}
-  </select>
-</td>
-<td class="py-3 px-4 border-b border-gray-200">
-  <select class="w-full p-2 border border-gray-300 rounded-lg loai-chi-phi">
-    <option value="">-- Chọn --</option>
-    <option value="Vật tư" ${loaiChiPhi === 'Vật tư' ? 'selected' : ''}>Vật tư</option>
-    <option value="Gia công" ${loaiChiPhi === 'Gia công' ? 'selected' : ''}>Gia công</option>
-    <option value="Vận chuyển" ${loaiChiPhi === 'Vận chuyển' ? 'selected' : ''}>Vận chuyển</option>
-    <option value="In ấn" ${loaiChiPhi === 'In ấn' ? 'selected' : ''}>In ấn</option>
-    <option value="Làm khuôn" ${loaiChiPhi === 'Làm khuôn' ? 'selected' : ''}>Làm khuôn</option>
-    <option value="In nhanh" ${loaiChiPhi === 'In nhanh' ? 'selected' : ''}>In nhanh</option>
-    <option value="Thiết kế" ${loaiChiPhi === 'Thiết kế' ? 'selected' : ''}>Thiết kế</option>
-    <option value="Khác" ${loaiChiPhi === 'Khác' ? 'selected' : ''}>Khác</option>
-    ${loaiChiPhi && !['Vật tư', 'Gia công', 'Vận chuyển', 'In ấn', 'Làm khuôn', 'In nhanh', 'Thiết kế', 'Khác'].includes(loaiChiPhi) ?
-                                    `<option value="${loaiChiPhi}" selected>${loaiChiPhi}</option>` : ''}
-  </select>
-</td>
-<td class="py-3 px-4 border-b border-gray-200">
-  <select class="w-full p-2 border border-gray-300 rounded-lg phuong-thuc-tt">
-    <option value="">-- Chọn --</option>
-    <option value="MB" ${phuongThucTT === 'MB' ? 'selected' : ''}>MB Ngân hàng Quân Đội (MB Bank)</option>
-    <option value="VP" ${phuongThucTT === 'VP' ? 'selected' : ''}>VP Ngân hàng VPBank</option>
-    <option value="Grab" ${phuongThucTT === 'Grab' ? 'selected' : ''}>Grab</option>
-    ${phuongThucTT && !['MB', 'VP', 'Grab', ''].includes(phuongThucTT) ?
-                                    `<option value="${phuongThucTT}" selected>${phuongThucTT}</option>
-    ` : ''}
-</select>
-</td>
-<td class="py-3 px-4 border-b border-gray-200">
-  <select class="w-full p-2 border border-gray-300 rounded-lg nguoi-de-xuat">
-    <option value="">-- Chọn --</option>
-    <!-- Sẽ được điền bởi JavaScript -->
-  </select>
-</td>
-<td class="py-3 px-4 border-b border-gray-200">
-  <input type="date" class="w-full p-2 border border-gray-300 rounded-lg ngay-chi" 
-      value="${formattedNgayChi}">
-</td>
-<td class="py-3 px-4 border-b border-gray-200">
-  <input type="number" class="w-full p-2 border border-gray-300 rounded-lg so-tien-chi" 
-      min="0" step="1000" value="${soTienChi}">
-</td>
-<td class="py-3 px-4 border-b border-gray-200">
-  <div class="flex space-x-2">
-    <button type="button" class="text-green-500 hover:text-green-700" onclick="copyRow(this)">
-      <i class="fas fa-copy"></i>
-    </button>
-    <button type="button" class="text-red-500 hover:text-red-700" onclick="deleteRow(this)">
-      <i class="fas fa-trash"></i>
-    </button>
-  </div>
-</td>
-`;
-                            tableBody.appendChild(newRow);
-
-                            // Fill employee dropdown
-                            const nguoiDeXuatSelect = newRow.querySelector('.nguoi-de-xuat');
-                            if (nguoiDeXuatSelect && this.nhanVienList) {
-                                this.nhanVienList.forEach(nhanVien => {
-                                    if (nhanVien['Tên nhân viên']) {
-                                        const option = document.createElement('option');
-                                        option.value = nhanVien['ID nhân viên'] || nhanVien.ID;
-                                        let displayName = nhanVien['Tên nhân viên'];
-                                        if (nhanVien['Mã nhân viên']) {
-                                            displayName = `${nhanVien['Mã nhân viên']} - ${displayName}`;
-                                        }
-                                        option.textContent = displayName;
-                                        nguoiDeXuatSelect.appendChild(option);
-                                    }
-                                });
-
-                                // Set employee from data or default to current user
-                                if (nguoiDeXuat) {
-                                    // Try to find by ID first
-                                    nguoiDeXuatSelect.value = nguoiDeXuat;
-
-                                    // If not found by ID, try to find by name
-                                    if (nguoiDeXuatSelect.value === '') {
-                                        const foundEmployee = this.nhanVienList.find(nv =>
-                                            nv['Tên nhân viên'] === nguoiDeXuat ||
-                                            `${nv['Mã nhân viên']} - ${nv['Tên nhân viên']}` === nguoiDeXuat
-                                        );
-
-                                        if (foundEmployee) {
-                                            nguoiDeXuatSelect.value = foundEmployee['ID nhân viên'] || foundEmployee.ID;
-                                        }
-                                    }
-                                } else if (this.employeeName) {
-                                    // Use current user if no employee specified
-                                    const foundEmployee = this.nhanVienList.find(nv =>
-                                        nv['Tên nhân viên'] === this.employeeName ||
-                                        (nv['Mã nhân viên'] && nv['Mã nhân viên'] + ' - ' + nv['Tên nhân viên'] === this.employeeName)
-                                    );
-
-                                    if (foundEmployee) {
-                                        nguoiDeXuatSelect.value = foundEmployee['ID nhân viên'] || foundEmployee.ID;
-                                    }
-                                }
-                            }
-
-                            // Add event listeners to row elements
-                            this.attachRowEventListeners(newRow);
-                            this.calculateRowValues(newRow);
-                            importCount++;
-                        } catch (rowError) {
-                            console.error('Lỗi nhập dòng:', rowError, row);
-                            errorCount++;
-                        }
-                    });
-
-                    // Update totals and progress
-                    this.updateOrderTotals();
-                    this.updateProgressSteps(2);
-
-                    // Close modal
-                    this.closeImportModal();
-
-                    this.hideLoading();
-
-                    // Show result message
-                    let resultMessage = `Đã nhập ${importCount} chi phí từ Excel.`;
-                    if (errorCount > 0) {
-                        resultMessage += ` Bỏ qua ${errorCount} dòng không hợp lệ.`;
-                    }
-
-                    this.showAlert('success', 'Nhập dữ liệu thành công', resultMessage);
-
-                } catch (error) {
-                    this.hideLoading();
-                    console.error('Lỗi nhập dữ liệu:', error);
-                    this.showAlert('error', 'Lỗi nhập dữ liệu', error.message || 'Có lỗi xảy ra khi nhập dữ liệu từ Excel.');
                 }
             }
 
@@ -1336,7 +1076,6 @@
                 }
             }
 
-            // Thêm phương thức này vào class BangKeCongNoManager
             // Cập nhật phương thức importDataFromExcel trong class BangKeCongNoManager
             async importDataFromExcel() {
                 try {
@@ -1357,6 +1096,7 @@
                     const colIndexes = {
                         idDonHang: headers.findIndex(h => /id.*đơn|đơn.*hàng|mã.*đơn|mã.*hàng/i.test(h)),
                         idHangHoa: headers.findIndex(h => /id.*hàng|hàng.*hóa|hàng.*hoá|tên.*hàng/i.test(h)),
+                        idNhaCungCap: headers.findIndex(h => /nhà.*cung.*cấp|ncc/i.test(h)),
                         hinhThucChi: headers.findIndex(h => /hình.*thức|chi.*trả/i.test(h)),
                         loaiChiPhi: headers.findIndex(h => /loại.*chi/i.test(h)),
                         phuongThucTT: headers.findIndex(h => /phương.*thức|thanh.*toán/i.test(h)),
@@ -1402,6 +1142,18 @@
                         });
                     }
 
+                    // Tạo mapping cho nhà cung cấp (thêm sau phần mapping đơn hàng và hàng hóa)
+                    const nhaCungCapMap = new Map();
+                    if (this.nhaCungCapList && this.nhaCungCapList.length > 0) {
+                        this.nhaCungCapList.forEach(ncc => {
+                            if (ncc['Tên nhà cung cấp'] && ncc['ID nhà cung cấp']) {
+                                nhaCungCapMap.set(ncc['Tên nhà cung cấp'].toLowerCase(), ncc['ID nhà cung cấp']);
+                            } else if (ncc['Tên nhà cung cấp'] && ncc.ID) {
+                                nhaCungCapMap.set(ncc['Tên nhà cung cấp'].toLowerCase(), ncc.ID);
+                            }
+                        });
+                    }
+
                     // Xử lý từng dòng
                     dataRows.forEach((row, rowIndex) => {
                         try {
@@ -1411,6 +1163,7 @@
 
                             const maDonHang = getValue(colIndexes.idDonHang, '');
                             const tenHangHoa = getValue(colIndexes.idHangHoa, '');
+                            const tenNhaCungCap = getValue(colIndexes.idNhaCungCap, ''); // Lấy tên nhà cung cấp
                             const hinhThucChi = getValue(colIndexes.hinhThucChi, '');
                             const loaiChiPhi = getValue(colIndexes.loaiChiPhi, '');
                             const phuongThucTT = getValue(colIndexes.phuongThucTT, '');
@@ -1427,6 +1180,7 @@
                             // Kiểm tra và chuyển đổi ID với thông báo lỗi chi tiết
                             let idDonHang = maDonHang;
                             let idHangHoa = tenHangHoa;
+                            let idNhaCungCap = tenNhaCungCap;
                             let hasError = false;
                             let errorMessages = [];
 
@@ -1444,6 +1198,14 @@
                                 errorMessages.push(`Tên hàng hóa "${tenHangHoa}" không tồn tại trong hệ thống`);
                             } else if (tenHangHoa) {
                                 idHangHoa = hangHoaMap.get(tenHangHoa.toLowerCase());
+                            }
+
+                            // Kiểm tra Tên nhà cung cấp - THÊM MỚI
+                            if (tenNhaCungCap && !nhaCungCapMap.has(tenNhaCungCap.toLowerCase())) {
+                                hasError = true;
+                                errorMessages.push(`Nhà cung cấp "${tenNhaCungCap}" không tồn tại trong hệ thống`);
+                            } else if (tenNhaCungCap) {
+                                idNhaCungCap = nhaCungCapMap.get(tenNhaCungCap.toLowerCase());
                             }
 
                             // Format ngày
@@ -1467,7 +1229,8 @@
                                     row: rowIndex + 2, // +2 vì header là dòng 1
                                     errors: errorMessages,
                                     maDonHang: maDonHang,
-                                    tenHangHoa: tenHangHoa
+                                    tenHangHoa: tenHangHoa,
+                                    tenNhaCungCap: tenNhaCungCap // Thêm tên nhà cung cấp vào lỗi
                                 });
                             }
 
@@ -1481,6 +1244,8 @@
                             newRow.dataset.ngayChi = formattedNgayChi;
                             newRow.dataset.soTienChi = soTienChi;
                             newRow.dataset.ghiChu = ghiChu;
+                            // Lưu vào dataset
+                            newRow.dataset.idNhaCungCap = idNhaCungCap;
                             newRow.dataset.hasError = hasError;
                             newRow.dataset.errorMessages = JSON.stringify(errorMessages);
 
@@ -1505,6 +1270,13 @@
     ${hasError && errorMessages.some(msg => msg.includes('Tên hàng hóa')) ?
                                     '<br><span class="text-xs text-red-500">⚠ Không tìm thấy</span>' : ''}
 </td>
+
+<td class="py-3 px-4 border-b border-gray-200 ${hasError && errorMessages.some(msg => msg.includes('Nhà cung cấp')) ? 'text-red-600 font-semibold' : ''}">
+    ${tenNhaCungCap}
+    ${hasError && errorMessages.some(msg => msg.includes('Nhà cung cấp')) ?
+                                    '<br><span class="text-xs text-red-500">⚠ Không tìm thấy</span>' : ''}
+</td>
+
 <td class="py-3 px-4 border-b border-gray-200">
   <select class="w-full p-2 border border-gray-300 rounded-lg hinh-thuc-chi">
     <option value="">-- Chọn --</option>
@@ -1551,6 +1323,13 @@
 <td class="py-3 px-4 border-b border-gray-200">
   <input type="number" class="w-full p-2 border border-gray-300 rounded-lg so-tien-chi" 
       min="0" step="1000" value="${soTienChi}">
+</td>
+<td class="py-3 px-4 border-b border-gray-200">
+  <button type="button" class="text-blue-500 hover:text-blue-700 bill-preview-btn" 
+    onclick="previewBill(this)" title="Xem bill">
+    <i class="fas fa-image"></i>
+    ${billFileName ? `<span class="ml-1 text-xs">${billFileName.substring(0, 10)}...</span>` : ''}
+  </button>
 </td>
 <td class="py-3 px-4 border-b border-gray-200">
   <div class="flex space-x-2">
@@ -1622,18 +1401,20 @@
                     if (errorDetails.length > 0) {
                         resultMessage += `\n\n⚠ Phát hiện ${errorDetails.length} dòng có lỗi:`;
 
-                        // Hiển thị chi tiết lỗi
+                        // phần hiển thị chi tiết lỗi
                         const errorDetailHtml = errorDetails.map(error => `
-                <div class="mb-2 p-2 bg-red-50 rounded">
-                    <div class="font-semibold text-red-700">Dòng ${error.row}:</div>
-                    <ul class="list-disc list-inside ml-4">
-                        ${error.errors.map(msg => `<li class="text-red-600">${msg}</li>`).join('')}
-                    </ul>
-                    <div class="text-sm text-gray-600 mt-1">
-                        Mã đơn hàng: ${error.maDonHang} | Tên hàng hóa: ${error.tenHangHoa}
-                    </div>
-                </div>
-            `).join('');
+                            <div class="mb-2 p-2 bg-red-50 rounded">
+                                <div class="font-semibold text-red-700">Dòng ${error.row}:</div>
+                                <ul class="list-disc list-inside ml-4">
+                                    ${error.errors.map(msg => `<li class="text-red-600">${msg}</li>`).join('')}
+                                </ul>
+                                <div class="text-sm text-gray-600 mt-1">
+                                    Mã đơn hàng: ${error.maDonHang} | 
+                                    Tên hàng hóa: ${error.tenHangHoa} |
+                                    Nhà cung cấp: ${error.tenNhaCungCap || 'N/A'}
+                                </div>
+                            </div>
+                        `).join('');
 
                         Swal.fire({
                             icon: 'warning',
@@ -1665,6 +1446,40 @@
                 }
             }
 
+            // Thêm các method này vào class BangKeCongNoManager
+
+            // Generate tên file unique cho Bill theo format AppSheet
+            generateBillFileName(originalName) {
+                const fileExtension = originalName.split('.').pop().toLowerCase();
+                const randomId = Math.random().toString(36).substring(2, 8);
+                const timestamp = Date.now();
+
+                // Format theo mẫu AppSheet: randomId.Bill.timestamp.extension
+                const fileName = `${randomId}.Bill.${timestamp}.${fileExtension}`;
+
+                // Trả về tên file với đường dẫn đầy đủ cho AppSheet
+                return `Chi phí sản xuất_Images/${fileName}`;
+            }
+
+            // Tạo URL đầy đủ để xem ảnh từ AppSheet  
+            generateAppSheetImageUrl(fileName, tableName = 'Chi phí sản xuất') {
+                if (!fileName) return '';
+
+                // AppName cố định
+                const appName = 'DucThanhManagement-698644967';
+
+                // Tạo URL theo format đúng của AppSheet
+                const baseUrl = 'https://www.appsheet.com/image/getimageurl';
+                const params = new URLSearchParams({
+                    appName: appName,
+                    tableName: tableName,
+                    fileName: fileName, // fileName đã có path đầy đủ
+                    width: 600
+                });
+
+                return `${baseUrl}?${params.toString()}`;
+            }
+
             async init() {
                 try {
                     this.showLoading('Đang khởi tạo...');
@@ -1688,7 +1503,6 @@
 
                     // Thiết lập các giá trị ban đầu
                     this.setupEventListeners();
-                    this.generateNewBangKeCode();
                     this.setupBangKeDropdown();
                     this.setDefaultDate();
 
@@ -2056,6 +1870,128 @@
                 });
             }
 
+            // Thêm phương thức này vào class BangKeCongNoManager
+            setupNhaCungCapDropdown() {
+                const modalNhaCungCap = document.getElementById('modalNhaCungCapChiPhi');
+
+                // Thay thế input với dropdown tùy chỉnh
+                const inputParent = modalNhaCungCap.parentElement;
+                const inputPosition = Array.from(inputParent.children).indexOf(modalNhaCungCap);
+
+                // Tạo container dropdown
+                const dropdownContainer = document.createElement('div');
+                dropdownContainer.className = 'relative';
+
+                // Tạo HTML cho dropdown nhà cung cấp
+                dropdownContainer.innerHTML = `
+        <div class="flex">
+            <input type="text" id="modalNhaCungCapChiPhi" class="w-full p-2 border border-gray-300 rounded-l-lg" 
+                placeholder="Nhập hoặc chọn nhà cung cấp" autocomplete="off">
+            <button type="button" id="nhaCungCapDropdownBtn" 
+                class="h-full px-3 py-2 bg-gray-100 text-gray-700 border border-l-0 border-gray-300 rounded-r-lg hover:bg-gray-200 transition duration-200 flex items-center">
+                <i class="fas fa-chevron-down"></i>
+            </button>
+        </div>
+        <div id="nhaCungCapDropdown" class="hidden absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-gray-300 rounded-lg shadow-lg z-50">
+            <input type="text" id="nhaCungCapSearch" class="w-full p-2 border-b border-gray-300 rounded-t-lg" placeholder="Tìm kiếm nhà cung cấp...">
+            <ul id="nhaCungCapList" class="py-1">
+                <!-- Supplier items will be added here -->
+            </ul>
+        </div>
+    `;
+
+                // Thay thế input cũ
+                modalNhaCungCap.remove();
+                if (inputPosition >= 0) {
+                    if (inputPosition === inputParent.children.length) {
+                        inputParent.appendChild(dropdownContainer);
+                    } else {
+                        inputParent.insertBefore(dropdownContainer, inputParent.children[inputPosition]);
+                    }
+                } else {
+                    inputParent.appendChild(dropdownContainer);
+                }
+
+                // Populate danh sách
+                const nhaCungCapList = document.getElementById('nhaCungCapList');
+                nhaCungCapList.innerHTML = '';
+
+                if (this.nhaCungCapList && this.nhaCungCapList.length > 0) {
+                    this.nhaCungCapList.forEach(ncc => {
+                        const id = ncc['ID nhà cung cấp'] || ncc.ID;
+                        const tenNCC = ncc['Tên nhà cung cấp'] || '';
+
+                        const li = document.createElement('li');
+                        li.className = 'px-4 py-2 hover:bg-gray-100 cursor-pointer';
+                        li.dataset.id = id;
+                        li.dataset.displayName = tenNCC;
+
+                        let displayText = tenNCC || id;
+                        li.textContent = displayText;
+                        nhaCungCapList.appendChild(li);
+                    });
+                } else {
+                    const li = document.createElement('li');
+                    li.className = 'px-4 py-2 text-gray-500 italic';
+                    li.textContent = 'Không có nhà cung cấp nào';
+                    nhaCungCapList.appendChild(li);
+                }
+
+                // Setup event listeners
+                const dropdownBtn = document.getElementById('nhaCungCapDropdownBtn');
+                const dropdown = document.getElementById('nhaCungCapDropdown');
+                const searchInput = document.getElementById('nhaCungCapSearch');
+                const nhaCungCapInput = document.getElementById('modalNhaCungCapChiPhi');
+
+                // Show/hide dropdown
+                dropdownBtn.addEventListener('click', () => {
+                    dropdown.classList.toggle('hidden');
+                    if (!dropdown.classList.contains('hidden')) {
+                        searchInput.focus();
+                    }
+                });
+
+                // Hide dropdown when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!dropdownBtn.contains(e.target) && !dropdown.contains(e.target)) {
+                        dropdown.classList.add('hidden');
+                    }
+                });
+
+                // Filter list on search
+                searchInput.addEventListener('input', () => {
+                    const searchValue = searchInput.value.toLowerCase();
+                    const items = nhaCungCapList.querySelectorAll('li');
+
+                    items.forEach(item => {
+                        if (item.classList.contains('text-gray-500')) return;
+
+                        const text = item.textContent.toLowerCase();
+                        if (text.includes(searchValue)) {
+                            item.classList.remove('hidden');
+                        } else {
+                            item.classList.add('hidden');
+                        }
+                    });
+                });
+
+                // Handle selection
+                nhaCungCapList.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'LI' && !e.target.classList.contains('text-gray-500')) {
+                        const id = e.target.dataset.id;
+                        const displayName = e.target.textContent;
+
+                        // Hiển thị tên nhà cung cấp cho người dùng
+                        nhaCungCapInput.value = displayName;
+
+                        // Lưu ID thực tế trong data attribute để submit
+                        nhaCungCapInput.dataset.supplierId = id;
+
+                        dropdown.classList.add('hidden');
+                    }
+                });
+            }
+
             // Load products for selected order
             async loadHangHoaForDonHang(donHangId) {
                 try {
@@ -2248,7 +2184,7 @@
                     }
                 });
             }
-            
+
             // Cập nhật phương thức loadExistingBangKeList để điền vào dropdown tùy chỉnh
             async loadExistingBangKeList() {
                 try {
@@ -2425,70 +2361,31 @@
                 return `${year}-${month}-${day}`;
             }
 
-            // Thêm code xử lý dropdown bảng kê tùy chỉnh
-            setupBangKeDropdown() {
-                const dropdownBtn = document.getElementById('bangKeDropdownBtn');
-                const dropdown = document.getElementById('bangKeDropdown');
-                const searchInput = document.getElementById('bangKeSearch');
-                const bangKeList = document.getElementById('bangKeList');
-                const maBangKeInput = document.getElementById('maBangKe');
+            // Thêm method vào class BangKeCongNoManager
+            // Preview bill với URL đầy đủ từ AppSheet
+            previewBill(button) {
+                const row = button.closest('tr');
+                const billFileName = row.dataset.billImage;
 
-                // Hiển thị/ẩn dropdown khi click vào nút
-                dropdownBtn.addEventListener('click', () => {
-                    dropdown.classList.toggle('hidden');
-                    if (!dropdown.classList.contains('hidden')) {
-                        searchInput.focus();
-                    }
-                });
+                if (billFileName) {
+                    // Generate URL đầy đủ với appName cụ thể
+                    const fullImageUrl = this.generateAppSheetImageUrl(billFileName);
 
-                // Ẩn dropdown khi click ra ngoài
-                document.addEventListener('click', (e) => {
-                    if (!dropdownBtn.contains(e.target) && !dropdown.contains(e.target)) {
-                        dropdown.classList.add('hidden');
-                    }
-                });
-
-                // Lọc danh sách khi tìm kiếm
-                searchInput.addEventListener('input', () => {
-                    const searchValue = searchInput.value.toLowerCase();
-                    const items = bangKeList.querySelectorAll('li');
-
-                    items.forEach(item => {
-                        const text = item.textContent.toLowerCase();
-                        if (text.includes(searchValue)) {
-                            item.classList.remove('hidden');
-                        } else {
-                            item.classList.add('hidden');
-                        }
+                    Swal.fire({
+                        imageUrl: fullImageUrl,
+                        imageAlt: 'Bill',
+                        imageWidth: 600, // AppSheet scale về 600px
+                        width: 'auto',
+                        showCloseButton: true,
+                        showConfirmButton: false
                     });
-                });
-
-                // Khi chọn một mã từ danh sách
-                bangKeList.addEventListener('click', (e) => {
-                    if (e.target.tagName === 'LI') {
-                        const id = e.target.dataset.id;
-                        maBangKeInput.value = id;
-                        dropdown.classList.add('hidden');
-
-                        // Kích hoạt xử lý chọn bảng kê
-                        this.handleBangKeSelection(id);
-                    }
-                });
-
-                // Khi nhập mã bảng kê trực tiếp
-                maBangKeInput.addEventListener('input', (e) => {
-                    const newValue = e.target.value;
-                    if (newValue) {
-                        // Kiểm tra xem mã này đã tồn tại chưa
-                        const existingOption = this.bangKeList.find(bangKe =>
-                            (bangKe['ID bảng kê công nợ phải trả'] || bangKe.ID) === newValue);
-
-                        if (existingOption) {
-                            // Nếu đã tồn tại, xử lý
-                            this.handleBangKeSelection(newValue);
-                        }
-                    }
-                });
+                } else {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Không có bill',
+                        text: 'Chưa có hình ảnh bill được tải lên cho chi phí này.'
+                    });
+                }
             }
 
             // Thiết lập sự kiện
@@ -2566,6 +2463,53 @@
                         });
                     }
                 };
+
+                // Thêm sự kiện cho upload bill
+                document.getElementById('btnChonBill').addEventListener('click', () => {
+                    document.getElementById('modalBillImage').click();
+                });
+
+                // Trong setupEventListeners(), cập nhật phần xử lý upload ảnh
+
+                document.getElementById('modalBillImage').addEventListener('change', async (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        // Kiểm tra kích thước file (max 5MB)
+                        if (file.size > 5 * 1024 * 1024) {
+                            this.showAlert('error', 'Lỗi', 'File quá lớn, vui lòng chọn file dưới 5MB');
+                            e.target.value = '';
+                            return;
+                        }
+
+                        // Kiểm tra loại file
+                        if (!file.type.match('image.*')) {
+                            this.showAlert('error', 'Lỗi', 'Vui lòng chọn file hình ảnh');
+                            e.target.value = '';
+                            return;
+                        }
+
+                        // Tạo tên file với đường dẫn đầy đủ
+                        const fileName = this.generateBillFileName(file.name);
+
+                        // Hiển thị tên file (chỉ hiển thị phần tên, không hiển thị path)
+                        const displayName = fileName.split('/').pop();
+                        document.getElementById('billFileName').textContent = displayName;
+
+                        // Lưu tên file đầy đủ (có path) để submit
+                        e.target.dataset.fileName = fileName;
+
+                        // Hiển thị preview
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            document.getElementById('billPreviewImage').src = event.target.result;
+                            document.getElementById('billPreview').classList.remove('hidden');
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+
+                // Thêm hàm xem bill vào window
+                window.previewBill = (btn) => this.previewBill(btn);
             }
 
             // Trong phương thức setupEventListeners() của class BangKeCongNoManager
@@ -2635,11 +2579,6 @@
                 });
             }
 
-            // Tạo mã bảng kê mới
-            generateNewBangKeCode() {
-                document.getElementById('maBangKe').value = this.generateMaBangKe();
-            }
-
             // Thiết lập ngày mặc định
             setDefaultDate() {
                 const today = new Date();
@@ -2678,11 +2617,6 @@
             parseCurrency(currencyString) {
                 if (!currencyString) return 0;
                 return parseFloat(String(currencyString).replace(/\./g, '').replace(/,/g, '.'));
-            }
-
-            // Tạo ID cho chi phí
-            generateChiPhiID(maBangKe, index) {
-                return `${maBangKe}-CP${String(index).padStart(3, '0')}`;
             }
 
             // Thêm phương thức này vào class BangKeCongNoManager
@@ -2937,9 +2871,6 @@
                 // Làm mới form công nợ
                 document.getElementById('bangKeForm').reset();
 
-                // Tạo mã mới
-                this.generateNewBangKeCode();
-
                 // Thiết lập ngày mặc định
                 this.setDefaultDate();
 
@@ -2958,6 +2889,7 @@
             }
 
             // Thêm hàng mới
+            // Thêm hàng mới
             addNewRow() {
                 document.getElementById('chiTietSection').classList.remove('hidden');
                 const tableBody = document.getElementById('chiTietTableBody');
@@ -2968,9 +2900,11 @@
                 newRow.dataset.loaiChiPhi = '';
                 newRow.dataset.idDonHang = '';
                 newRow.dataset.idHangHoa = '';
+                newRow.dataset.idNhaCungCap = '';
                 newRow.dataset.soTienChi = '0';
                 newRow.dataset.ngayChi = this.formatDate(new Date());
                 newRow.dataset.ghiChu = '';
+                newRow.dataset.billImage = '';
 
                 // Nội dung hàng chi phí
                 newRow.innerHTML = `
@@ -2981,6 +2915,9 @@
     </td>
     <td class="py-3 px-4 border-b border-gray-200">${newRow.dataset.idDonHang}</td>
     <td class="py-3 px-4 border-b border-gray-200">${newRow.dataset.idHangHoa}</td>
+    <td class="py-3 px-4 border-b border-gray-200">
+      <!-- Thay đổi ở đây - hiển thị text như mã đơn hàng và tên hàng hóa -->
+    </td>
     <td class="py-3 px-4 border-b border-gray-200">
       <select class="w-full p-2 border border-gray-300 rounded-lg hinh-thuc-chi">
         <option value="">-- Chọn --</option>
@@ -3004,15 +2941,14 @@
     <td class="py-3 px-4 border-b border-gray-200">
       <select class="w-full p-2 border border-gray-300 rounded-lg phuong-thuc-tt">
         <option value="">-- Chọn --</option>
-        <option value="MB">MB Ngân hàng Quân Đội (MB Bank)</option>
-        <option value="VP">VP Ngân hàng VPBank</option>
+        <option value="MB">MB Bank - CN Gia Lâm. STK: 6666.939.8888 - Đỗ Trọng Nghĩa</option>
+        <option value="VP">VPBank - CN Thăng Long. STK: 156939258 - DUC THANH SERPRO</option>
         <option value="Grab">Grab</option>
       </select>
     </td>
     <td class="py-3 px-4 border-b border-gray-200">
       <select class="w-full p-2 border border-gray-300 rounded-lg nguoi-de-xuat">
         <option value="">-- Chọn --</option>
-        <!-- Sẽ được điền bởi JavaScript -->
       </select>
     </td>
     <td class="py-3 px-4 border-b border-gray-200">
@@ -3024,6 +2960,12 @@
           min="0" step="1000" value="0">
     </td>
     <td class="py-3 px-4 border-b border-gray-200">
+  <button type="button" class="text-blue-500 hover:text-blue-700 bill-preview-btn" 
+    onclick="previewBill(this)" title="Xem bill">
+    <i class="fas fa-image"></i>
+  </button>
+</td>
+    <td class="py-3 px-4 border-b border-gray-200">
       <div class="flex space-x-2">
         <button type="button" class="text-green-500 hover:text-green-700" onclick="copyRow(this)">
           <i class="fas fa-copy"></i>
@@ -3034,7 +2976,11 @@
       </div>
     </td>
     `;
+
                 tableBody.appendChild(newRow);
+
+                // Không cần điền danh sách nhà cung cấp vào select nữa
+                // vì giờ chúng ta dùng dropdown trong modal
 
                 // Điền danh sách nhân viên vào dropdown người đề xuất
                 const nguoiDeXuatSelect = newRow.querySelector('.nguoi-de-xuat');
@@ -3072,31 +3018,8 @@
                     soTienChiInput.addEventListener('input', () => this.updateOrderTotals());
                 }
 
-                // Thêm sự kiện cho trường ngày
-                const ngayChiInput = newRow.querySelector('.ngay-chi');
-                if (ngayChiInput) {
-                    ngayChiInput.addEventListener('change', (e) => {
-                        newRow.dataset.ngayChi = e.target.value;
-                    });
-                }
-
-                // Thêm sự kiện cho các trường select
-                newRow.querySelector('.hinh-thuc-chi').addEventListener('change', (e) => {
-                    newRow.dataset.hinhThucChi = e.target.value;
-                });
-
-                newRow.querySelector('.loai-chi-phi').addEventListener('change', (e) => {
-                    newRow.dataset.loaiChiPhi = e.target.value;
-                });
-
-                newRow.querySelector('.phuong-thuc-tt').addEventListener('change', (e) => {
-                    newRow.dataset.phuongThucTT = e.target.value;
-                });
-
-                newRow.querySelector('.nguoi-de-xuat').addEventListener('change', (e) => {
-                    newRow.dataset.nguoiDeXuat = e.target.value;
-                });
-
+                // Thêm sự kiện cho các trường khác
+                this.attachRowEventListeners(newRow);
                 this.calculateRowValues(newRow);
                 newRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 this.updateProgressSteps(2);
@@ -3163,7 +3086,7 @@
                 });
             }
 
-            // Thu thập dữ liệu từ bảng chi tiết chi phí (tiếp tục)
+            // Thu thập dữ liệu từ bảng chi tiết chi phí
             collectChiPhiData() {
                 const maBangKe = document.getElementById('maBangKe').value;
                 const chiPhiRows = document.querySelectorAll('#chiTietTableBody tr');
@@ -3197,8 +3120,11 @@
                     const ghiChu = row.dataset.ghiChu || '';
                     const idChiPhi = row.dataset.idChiPhi || this.generateUniqueID();
 
-                    // ID nhà cung cấp từ form chính
-                    const idNhaCungCap = document.getElementById('nhaCungCap').value;
+                    // Lấy nhà cung cấp từ data attribute
+                    const idNhaCungCapChiPhi = row.dataset.idNhaCungCap || '';
+
+                    // Lấy tên file bill (chỉ tên file, không phải URL)
+                    const billFileName = row.dataset.billImage || '';
 
                     // Tạo đối tượng chi phí
                     const chiPhiItem = {
@@ -3207,13 +3133,14 @@
                         'ID hàng hoá': idHangHoa,
                         'Mã đơn hàng': maBangKe,
                         'ID bảng kê công nợ phải trả': maBangKe,
+                        'ID nhà cung cấp': idNhaCungCapChiPhi,
                         'Hình thức chi': hinhThucChi,
                         'Loại chi phí': loaiChiPhi,
-                        'ID nhà cung cấp': idNhaCungCap,
                         'Phương thức thanh toán': phuongThucTT,
                         'Ngày chi': ngayChi,
                         'Người đề xuất chi': nguoiDeXuat,
                         'Số tiền chi': soTienChi,
+                        'Bill': billFileName, // Chỉ lưu tên file, AppSheet sẽ tự thêm path
                         'Ghi chú': ghiChu,
                         'Người tạo': nguoiTaoId
                     };
@@ -3388,24 +3315,45 @@
                 // Lấy dữ liệu từ data attributes nếu có
                 document.getElementById('modalGhiChu').value = this.currentEditingRow.dataset.ghiChu || '';
 
-                // Set the order and product IDs
+                // Set đơn hàng
                 const idDonHang = this.currentEditingRow.dataset.idDonHang || '';
-                const idHangHoa = this.currentEditingRow.dataset.idHangHoa || '';
                 const displayIdDonHang = this.currentEditingRow.cells[1].textContent;
-                const displayIdHangHoa = this.currentEditingRow.cells[2].textContent;
 
-                // Ensure modalIdDonHang and modalIdHangHoa exist
+                // Setup dropdown đơn hàng
+                this.setupOrderDropdown();
+
                 const modalIdDonHangInput = document.getElementById('modalIdDonHang');
-                const modalIdHangHoaInput = document.getElementById('modalIdHangHoa');
-
                 if (modalIdDonHangInput) {
                     modalIdDonHangInput.value = displayIdDonHang;
                     modalIdDonHangInput.dataset.orderId = idDonHang;
                 }
 
-                if (modalIdHangHoaInput) {
-                    modalIdHangHoaInput.value = displayIdHangHoa;
-                    modalIdHangHoaInput.dataset.productId = idHangHoa;
+                // Set hàng hóa  
+                const idHangHoa = this.currentEditingRow.dataset.idHangHoa || '';
+                const displayIdHangHoa = this.currentEditingRow.cells[2].textContent;
+
+                // Load hàng hóa cho đơn hàng được chọn
+                if (idDonHang) {
+                    this.loadHangHoaForDonHang(idDonHang).then(() => {
+                        const modalIdHangHoaInput = document.getElementById('modalIdHangHoa');
+                        if (modalIdHangHoaInput) {
+                            modalIdHangHoaInput.value = displayIdHangHoa;
+                            modalIdHangHoaInput.dataset.productId = idHangHoa;
+                        }
+                    });
+                }
+
+                // Set nhà cung cấp
+                const idNhaCungCap = this.currentEditingRow.dataset.idNhaCungCap || '';
+                const displayNhaCungCap = this.currentEditingRow.cells[3].textContent;
+
+                // Setup dropdown nhà cung cấp
+                this.setupNhaCungCapDropdown();
+
+                const modalNhaCungCapInput = document.getElementById('modalNhaCungCapChiPhi');
+                if (modalNhaCungCapInput) {
+                    modalNhaCungCapInput.value = displayNhaCungCap;
+                    modalNhaCungCapInput.dataset.supplierId = idNhaCungCap;
                 }
 
                 // Xử lý loại chi phí tùy chỉnh
@@ -3418,6 +3366,21 @@
                     modalLoaiChiPhiCustom.classList.remove('hidden');
                 } else {
                     modalLoaiChiPhiCustom.classList.add('hidden');
+                }
+
+                // Load bill nếu có
+                const billFileName = this.currentEditingRow.dataset.billImage;
+                if (billFileName) {
+                    document.getElementById('billFileName').textContent = billFileName;
+
+                    // Generate URL để preview
+                    const fullImageUrl = this.generateAppSheetImageUrl(billFileName);
+
+                    document.getElementById('billPreviewImage').src = fullImageUrl;
+                    document.getElementById('billPreview').classList.remove('hidden');
+                } else {
+                    document.getElementById('billFileName').textContent = '';
+                    document.getElementById('billPreview').classList.add('hidden');
                 }
 
                 // Hiển thị modal
@@ -3463,6 +3426,31 @@
                     const idHangHoa = modalIdHangHoaInput.dataset.productId || modalIdHangHoaInput.value;
                     const displayIdHangHoa = modalIdHangHoaInput.value;
 
+                    // Get selected supplier information
+                    const modalNhaCungCapInput = document.getElementById('modalNhaCungCapChiPhi');
+                    const idNhaCungCap = modalNhaCungCapInput.dataset.supplierId || '';
+                    const displayNhaCungCap = modalNhaCungCapInput.value;
+
+                    // Xử lý bill image cho AppSheet
+                    const billFileInput = document.getElementById('modalBillImage');
+                    const billFile = billFileInput.files[0];
+
+                    // Trong handleUpdateChiPhi
+                    if (billFile) {
+                        // Lấy tên file đã được format với path đầy đủ
+                        const fileName = billFileInput.dataset.fileName || this.generateBillFileName(billFile.name);
+
+                        // Lưu tên file đầy đủ vào dataset
+                        this.currentEditingRow.dataset.billImage = fileName;
+
+                        // Cập nhật hiển thị trong bảng (chỉ hiển thị tên file)
+                        const billCell = this.currentEditingRow.querySelector('.bill-preview-btn');
+                        if (billCell) {
+                            const displayName = fileName.split('/').pop();
+                            billCell.innerHTML = `<i class="fas fa-image"></i> <span class="text-xs">${displayName.substring(0, 15)}...</span>`;
+                        }
+                    }
+
                     // Xác định loại chi phí (từ select hoặc custom input)
                     let loaiChiPhi = loaiChiPhiControl.value;
                     if (loaiChiPhi === 'custom') {
@@ -3477,18 +3465,28 @@
                     this.currentEditingRow.querySelector('.ngay-chi').value = ngayChi;
                     this.currentEditingRow.querySelector('.so-tien-chi').value = soTienChi;
 
-                    // Cập nhật hiển thị ID đơn hàng và ID hàng hóa
+                    // Cập nhật hiển thị các cột
                     const idDonHangCell = this.currentEditingRow.cells[1];
                     const idHangHoaCell = this.currentEditingRow.cells[2];
+                    const nhaCungCapCell = this.currentEditingRow.cells[3];
+
                     idDonHangCell.textContent = displayIdDonHang;
                     idHangHoaCell.textContent = displayIdHangHoa;
+                    nhaCungCapCell.textContent = displayNhaCungCap;
 
-                    // Lưu các giá trị bổ sung vào data attributes
+                    // Cập nhật select nhà cung cấp trong hàng
+                    const nhaCungCapSelect = this.currentEditingRow.querySelector('.nha-cung-cap-chi-phi');
+                    if (nhaCungCapSelect) {
+                        nhaCungCapSelect.value = idNhaCungCap;
+                    }
+
+                    // Lưu các giá trị vào data attributes
                     this.currentEditingRow.dataset.ngayChi = ngayChi;
                     this.currentEditingRow.dataset.ghiChu = ghiChu;
                     this.currentEditingRow.dataset.soTienChi = soTienChi;
                     this.currentEditingRow.dataset.idDonHang = idDonHang;
                     this.currentEditingRow.dataset.idHangHoa = idHangHoa;
+                    this.currentEditingRow.dataset.idNhaCungCap = idNhaCungCap;
                     this.currentEditingRow.dataset.hinhThucChi = hinhThucChi;
                     this.currentEditingRow.dataset.loaiChiPhi = loaiChiPhi;
                     this.currentEditingRow.dataset.phuongThucTT = phuongThucTT;
@@ -3502,21 +3500,10 @@
                     this.closeChiPhiDetailModal();
 
                     // Hiển thị thông báo thành công
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Cập nhật thành công!',
-                        text: 'Đã cập nhật thông tin chi phí.',
-                        showConfirmButton: false,
-                        timer: 1500
-                    });
+                    this.showAlert('success', 'Cập nhật thành công!', 'Đã cập nhật thông tin chi phí.');
                 } catch (error) {
                     console.error('Lỗi cập nhật chi phí:', error);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Lỗi!',
-                        text: 'Có lỗi xảy ra khi cập nhật thông tin.',
-                        showConfirmButton: true
-                    });
+                    this.showAlert('error', 'Lỗi!', 'Có lỗi xảy ra khi cập nhật thông tin.');
                 }
             }
 
