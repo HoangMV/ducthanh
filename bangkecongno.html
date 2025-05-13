@@ -143,6 +143,11 @@
             z-index: 5;
         }
 
+        .required-field {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
+        }
+
         /* Input focus */
         .custom-input:focus {
             outline: none;
@@ -406,13 +411,16 @@
                                 </th>
                                 <th
                                     class="py-3 px-4 border-b border-gray-300 bg-gradient-to-r from-blue-50 to-blue-100 font-medium text-gray-700 sticky top-0">
-                                    Mã đơn hàng</th>
+                                    Mã đơn hàng <span class="text-red-500">*</span>
+                                </th>
                                 <th
                                     class="py-3 px-4 border-b border-gray-300 bg-gradient-to-r from-blue-50 to-blue-100 font-medium text-gray-700 sticky top-0">
-                                    Tên hàng hóa</th>
+                                    Tên hàng hóa <span class="text-red-500">*</span>
+                                </th>
                                 <th
                                     class="py-3 px-4 border-b border-gray-300 bg-gradient-to-r from-blue-50 to-blue-100 font-medium text-gray-700 sticky top-0">
-                                    Nhà cung cấp</th> <!-- Thêm cột mới -->
+                                    Nhà cung cấp <span class="text-red-500">*</span>
+                                </th>
                                 <th
                                     class="py-3 px-4 border-b border-gray-300 bg-gradient-to-r from-blue-50 to-blue-100 font-medium text-gray-700 sticky top-0">
                                     Loại chi phí</th>
@@ -1805,6 +1813,23 @@
                 }
             }
 
+            // Thêm method này vào class BangKeCongNoManager
+            highlightRequiredFields(row, fields) {
+                fields.forEach(field => {
+                    const element = row.querySelector(field.selector);
+                    if (element && !element.value) {
+                        element.classList.add('required-field');
+
+                        // Xóa highlight sau khi người dùng điền
+                        element.addEventListener('change', function () {
+                            if (this.value) {
+                                this.classList.remove('required-field');
+                            }
+                        });
+                    }
+                });
+            }
+
             // Cập nhật phương thức copyRow để sao chép đúng giá trị
             copyRow(button) {
                 const row = button.closest('tr');
@@ -2703,6 +2728,29 @@
                         });
                     }
                 };
+
+                // Thêm hàm để hiển thị chi tiết kỹ thuật khi cần
+                window.toggleTechnicalDetails = function () {
+                    if (window.lastTechnicalError) {
+                        const error = window.lastTechnicalError;
+                        let technicalDetails = '';
+
+                        if (error.response && error.response.data) {
+                            technicalDetails = JSON.stringify(error.response.data, null, 2);
+                        } else {
+                            technicalDetails = error.stack || error.message;
+                        }
+
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Chi tiết kỹ thuật',
+                            html: `<pre class="text-left text-xs bg-gray-100 p-3 rounded overflow-auto" style="max-height: 400px;">${technicalDetails}</pre>`,
+                            confirmButtonColor: '#0ea5e9',
+                            confirmButtonText: 'Đóng',
+                            width: '800px'
+                        });
+                    }
+                }
             }
 
             // Trong phương thức setupEventListeners() của class BangKeCongNoManager
@@ -3326,7 +3374,7 @@
                 const chiPhiRows = document.querySelectorAll('#chiTietTableBody tr');
                 const chiPhiItems = [];
 
-                // Tìm ID của nhân viên từ tên được truyền trong URL
+                // Tìm ID của nhân viên
                 let nguoiTaoId = '';
                 if (this.employeeName && this.nhanVienList) {
                     const foundEmployee = this.nhanVienList.find(nv =>
@@ -3342,41 +3390,61 @@
                 chiPhiRows.forEach((row, index) => {
                     try {
                         // Lấy giá trị từ các dropdown và input
-                        const idDonHang = row.querySelector('.ma-don-hang')?.value || row.dataset.idDonHang || '';
-                        const idHangHoa = row.querySelector('.ten-hang-hoa')?.value || row.dataset.idHangHoa || '';
-                        const idNhaCungCap = row.querySelector('.nha-cung-cap')?.value || row.dataset.idNhaCungCap || '';
-                        const loaiChiPhi = row.querySelector('.loai-chi-phi').value;
-                        const phuongThucTT = row.querySelector('.phuong-thuc-tt').value;
-                        const nguoiDeXuat = row.querySelector('.nguoi-de-xuat').value;
-                        const ngayChi = row.querySelector('.ngay-chi').value;
-                        const soTienChi = parseFloat(row.querySelector('.so-tien-chi').value) || 0;
-                        const ghiChu = row.dataset.ghiChu || '';
-                        const idChiPhi = row.dataset.idChiPhi || this.generateUniqueID();
+                        const idDonHang = row.querySelector('.ma-don-hang')?.value || '';
+                        const idHangHoa = row.querySelector('.ten-hang-hoa')?.value || '';
+                        const idNhaCungCap = row.querySelector('.nha-cung-cap')?.value || '';
+                        const loaiChiPhi = row.querySelector('.loai-chi-phi')?.value || '';
+                        const phuongThucTT = row.querySelector('.phuong-thuc-tt')?.value || '';
+                        const nguoiDeXuat = row.querySelector('.nguoi-de-xuat')?.value || '';
+                        const ngayChi = row.querySelector('.ngay-chi')?.value || '';
+                        const soTienChi = parseFloat(row.querySelector('.so-tien-chi')?.value) || 0;
 
-                        // Tạo đối tượng chi phí với giá trị null cho trường rỗng
+                        // Kiểm tra các trường bắt buộc mới
+                        if (!idDonHang) {
+                            throw new Error(`Dòng ${index + 1}: Vui lòng chọn Mã đơn hàng`);
+                        }
+                        if (!idHangHoa) {
+                            throw new Error(`Dòng ${index + 1}: Vui lòng chọn Tên hàng hóa`);
+                        }
+                        if (!idNhaCungCap) {
+                            throw new Error(`Dòng ${index + 1}: Vui lòng chọn Nhà cung cấp`);
+                        }
+                        if (!loaiChiPhi) {
+                            throw new Error(`Dòng ${index + 1}: Vui lòng chọn Loại chi phí`);
+                        }
+                        if (!soTienChi || soTienChi <= 0) {
+                            throw new Error(`Dòng ${index + 1}: Vui lòng nhập Số tiền chi hợp lệ`);
+                        }
+
+                        if (!idDonHang || !idHangHoa || !idNhaCungCap) {
+                            this.highlightRequiredFields(row, [
+                                { selector: '.ma-don-hang', value: idDonHang },
+                                { selector: '.ten-hang-hoa', value: idHangHoa },
+                                { selector: '.nha-cung-cap', value: idNhaCungCap }
+                            ]);
+                        }
+
+                        // Tạo đối tượng chi phí với giá trị chuẩn
                         const chiPhiItem = {
-                            'ID chi phí': idChiPhi,
-                            'ID đơn hàng': idDonHang || null,
-                            'ID hàng hoá': idHangHoa || null,
+                            'ID chi phí': this.generateUniqueID(),
+                            'ID đơn hàng': idDonHang,
+                            'ID hàng hoá': idHangHoa,
                             'ID bảng kê công nợ phải trả': maBangKe,
                             'Hình thức chi': "Chi theo bảng kê",
-                            'Loại chi phí': loaiChiPhi || null,
-                            'ID nhà cung cấp': idNhaCungCap || null,
+                            'Loại chi phí': loaiChiPhi,
+                            'ID nhà cung cấp': idNhaCungCap,
                             'Phương thức thanh toán': phuongThucTT || null,
                             'Ngày chi': ngayChi || null,
                             'Người đề xuất chi': nguoiDeXuat || null,
                             'Số tiền chi': soTienChi,
-                            'Ghi chú': ghiChu || null,
+                            'Ghi chú': row.dataset.ghiChu || null,
                             'Người tạo': nguoiTaoId || null
                         };
-
-                        // Log chi tiết từng dòng
-                        console.log(`Chi phí dòng ${index + 1}:`, chiPhiItem);
 
                         chiPhiItems.push(chiPhiItem);
                     } catch (error) {
                         console.error(`Lỗi khi thu thập dữ liệu dòng ${index + 1}:`, error);
-                        throw new Error(`Lỗi ở dòng ${index + 1}: ${error.message}`);
+                        throw error; // Ném lỗi để xử lý ở method saveDataToAppSheet
                     }
                 });
 
@@ -3389,9 +3457,14 @@
                     // Kiểm tra các trường bắt buộc
                     const maBangKe = document.getElementById('maBangKe').value;
                     const ngayTao = document.getElementById('ngayTao').value;
+                    const nhaCungCapId = document.getElementById('nhaCungCap').value;
 
-                    if (!maBangKe || !ngayTao) {
-                        throw new Error('Vui lòng điền đầy đủ thông tin bắt buộc: Mã bảng kê, Ngày tạo');
+                    if (!maBangKe) {
+                        throw new Error('Vui lòng nhập mã bảng kê công nợ phải trả');
+                    }
+
+                    if (!ngayTao) {
+                        throw new Error('Vui lòng chọn ngày tạo');
                     }
 
                     // Kiểm tra danh sách chi phí
@@ -3400,8 +3473,8 @@
                         throw new Error('Vui lòng thêm ít nhất một chi phí vào bảng kê');
                     }
 
-                    // Hiển thị loading với chi tiết
-                    this.showLoading('Đang chuẩn bị dữ liệu...');
+                    // Hiển thị loading
+                    this.showLoading('Đang lưu dữ liệu...');
 
                     // Tìm ID của nhân viên từ tên được truyền trong URL
                     let nguoiTaoId = '';
@@ -3416,11 +3489,11 @@
                         }
                     }
 
-                    // Thu thập dữ liệu bảng kê với kiểm tra chi tiết
+                    // Thu thập dữ liệu bảng kê
                     const bangKeData = {
                         'ID bảng kê công nợ phải trả': maBangKe,
                         'Mã bảng kê công nợ phải trả': maBangKe,
-                        'ID nhà cung cấp': document.getElementById('nhaCungCap').value || null,
+                        'ID nhà cung cấp': nhaCungCapId || null,
                         'Trạng thái duyệt': document.getElementById('trangThaiDuyet').value || 'Chưa duyệt',
                         'Người duyệt': document.getElementById('nguoiDuyet').value || null,
                         'Ngày chi': document.getElementById('ngayChi').value || null,
@@ -3429,120 +3502,49 @@
                         'Người tạo': nguoiTaoId || null
                     };
 
-                    console.log('Dữ liệu bảng kê:', bangKeData);
+                    // Tạo payload cho bảng kê
+                    const bangKePayload = {
+                        "Action": "Add",
+                        "Properties": {
+                            "Locale": "vi-VN",
+                            "Timezone": "Asia/Ho_Chi_Minh"
+                        },
+                        "Rows": [bangKeData]
+                    };
 
-                    // Kiểm tra xem bảng kê đã tồn tại chưa
-                    const existingBangKe = this.bangKeList?.find(bk =>
-                        (bk['ID bảng kê công nợ phải trả'] || bk.ID) === maBangKe
-                    );
+                    console.log('Dữ liệu gửi lên:', bangKePayload);
 
-                    if (existingBangKe) {
-                        throw new Error(`Mã bảng kê "${maBangKe}" đã tồn tại. Vui lòng sử dụng mã khác.`);
-                    }
-
-                    // Thu thập dữ liệu chi phí
-                    this.chiPhiList = this.collectChiPhiData();
-                    console.log('Dữ liệu chi phí:', this.chiPhiList);
-
-                    // Kiểm tra chi phí chi tiết
-                    const invalidChiPhi = [];
-                    this.chiPhiList.forEach((item, index) => {
-                        const errors = [];
-
-                        if (!item['Loại chi phí']) {
-                            errors.push('Thiếu loại chi phí');
-                        }
-                        if (!item['Số tiền chi'] || item['Số tiền chi'] <= 0) {
-                            errors.push('Số tiền chi không hợp lệ');
-                        }
-                        if (!item['ID đơn hàng']) {
-                            errors.push('Thiếu mã đơn hàng');
-                        }
-
-                        if (errors.length > 0) {
-                            invalidChiPhi.push(`Dòng ${index + 1}: ${errors.join(', ')}`);
-                        }
-                    });
-
-                    if (invalidChiPhi.length > 0) {
-                        throw new Error('Dữ liệu chi phí không hợp lệ:\n' + invalidChiPhi.join('\n'));
-                    }
-
-                    this.showLoading('Đang lưu bảng kê...');
-
-                    // Lưu bảng kê trước
+                    // Thu thập dữ liệu chi phí với validation
                     try {
-                        const bangKePayload = {
-                            "Action": "Add",
-                            "Properties": {
-                                "Locale": "vi-VN",
-                                "Timezone": "Asia/Ho_Chi_Minh"
-                            },
-                            "Rows": [bangKeData]
-                        };
+                        this.chiPhiList = this.collectChiPhiData();
+                    } catch (validationError) {
+                        this.hideLoading();
+                        this.showAlert('error', 'Thiếu thông tin bắt buộc', validationError.message);
+                        return;
+                    }
 
-                        const responseBangKe = await axios({
+                    // Tạo payload chi phí
+                    const chiPhiPayload = {
+                        "Action": "Add",
+                        "Properties": {
+                            "Locale": "vi-VN",
+                            "Timezone": "Asia/Ho_Chi_Minh"
+                        },
+                        "Rows": this.chiPhiList
+                    };
+
+                    // Gửi request đồng thời
+                    const [responseBangKe, responseChiPhi] = await Promise.all([
+                        axios({
                             method: 'POST',
                             url: `https://www.appsheet.com/api/v2/apps/${this.appId}/tables/Bảng kê công nợ phải trả/Action`,
                             headers: {
                                 'ApplicationAccessKey': this.accessKey,
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json'
+                                'Content-Type': 'application/json'
                             },
                             data: bangKePayload
-                        });
-
-                        console.log('Response bảng kê:', responseBangKe.status, responseBangKe.data);
-
-                        if (responseBangKe.status !== 200) {
-                            throw new Error(`Lỗi lưu bảng kê: ${responseBangKe.status} - ${JSON.stringify(responseBangKe.data)}`);
-                        }
-
-                    } catch (error) {
-                        console.error('Lỗi chi tiết khi lưu bảng kê:', error);
-
-                        if (error.response) {
-                            // Xử lý lỗi từ AppSheet API
-                            const errorDetail = error.response.data;
-                            let errorMessage = 'Lỗi từ server: ';
-
-                            if (errorDetail.Error) {
-                                errorMessage += errorDetail.Error;
-                            } else if (errorDetail.message) {
-                                errorMessage += errorDetail.message;
-                            } else if (errorDetail.error) {
-                                errorMessage += errorDetail.error;
-                            } else {
-                                errorMessage += JSON.stringify(errorDetail);
-                            }
-
-                            // Kiểm tra lỗi cụ thể
-                            if (errorMessage.includes('duplicate')) {
-                                throw new Error('Mã bảng kê đã tồn tại. Vui lòng sử dụng mã khác.');
-                            } else if (errorMessage.includes('required')) {
-                                throw new Error('Thiếu trường bắt buộc. Vui lòng kiểm tra lại thông tin.');
-                            } else {
-                                throw new Error(errorMessage);
-                            }
-                        } else {
-                            throw error;
-                        }
-                    }
-
-                    this.showLoading('Đang lưu chi phí...');
-
-                    // Lưu chi phí
-                    try {
-                        const chiPhiPayload = {
-                            "Action": "Add",
-                            "Properties": {
-                                "Locale": "vi-VN",
-                                "Timezone": "Asia/Ho_Chi_Minh"
-                            },
-                            "Rows": this.chiPhiList
-                        };
-
-                        const responseChiPhi = await axios({
+                        }),
+                        axios({
                             method: 'POST',
                             url: `https://www.appsheet.com/api/v2/apps/${this.appId}/tables/Chi phí sản xuất/Action`,
                             headers: {
@@ -3550,33 +3552,12 @@
                                 'Content-Type': 'application/json'
                             },
                             data: chiPhiPayload
-                        });
+                        })
+                    ]);
 
-                        console.log('Response chi phí:', responseChiPhi.status, responseChiPhi.data);
-
-                        if (responseChiPhi.status !== 200) {
-                            throw new Error(`Lỗi lưu chi phí: ${responseChiPhi.status} - ${JSON.stringify(responseChiPhi.data)}`);
-                        }
-
-                    } catch (error) {
-                        console.error('Lỗi chi tiết khi lưu chi phí:', error);
-
-                        if (error.response) {
-                            const errorDetail = error.response.data;
-                            let errorMessage = 'Lỗi từ server khi lưu chi phí: ';
-
-                            if (errorDetail.Error) {
-                                errorMessage += errorDetail.Error;
-                            } else if (errorDetail.message) {
-                                errorMessage += errorDetail.message;
-                            } else {
-                                errorMessage += JSON.stringify(errorDetail);
-                            }
-
-                            throw new Error(errorMessage);
-                        } else {
-                            throw error;
-                        }
+                    // Kiểm tra kết quả
+                    if (responseBangKe.status !== 200 || responseChiPhi.status !== 200) {
+                        throw new Error('Có lỗi xảy ra khi lưu dữ liệu');
                     }
 
                     // Thành công
@@ -3590,23 +3571,66 @@
 
                 } catch (error) {
                     this.hideLoading();
-                    console.error('Lỗi tổng quát:', error);
+                    console.error('Lỗi chi tiết:', error);
 
-                    // Hiển thị lỗi chi tiết cho người dùng
+                    // Xử lý và hiển thị lỗi thân thiện với người dùng
+                    let userFriendlyMessage = 'Có lỗi xảy ra khi lưu dữ liệu.';
+                    let suggestion = '';
+
+                    if (error.response && error.response.data) {
+                        const errorData = error.response.data;
+                        const errorMessage = errorData.Error || errorData.error || errorData.message || '';
+
+                        // Phân tích lỗi từ AppSheet và chuyển thành thông báo dễ hiểu
+                        if (errorMessage.includes('ID nhà cung cấp') || errorMessage.includes('Missing value in column')) {
+                            userFriendlyMessage = 'Thiếu thông tin bắt buộc.';
+                            suggestion = 'Vui lòng kiểm tra lại các trường có dấu (*) trong bảng chi phí.';
+                        } else if (errorMessage.includes('duplicate') || errorMessage.includes('already exists')) {
+                            userFriendlyMessage = 'Mã bảng kê đã tồn tại trong hệ thống.';
+                            suggestion = 'Vui lòng sử dụng mã bảng kê khác.';
+                        } else if (errorMessage.includes('required value is missing')) {
+                            userFriendlyMessage = 'Thiếu thông tin bắt buộc.';
+                            suggestion = 'Vui lòng kiểm tra và điền đầy đủ các thông tin có dấu (*).';
+                        } else if (errorMessage.includes('invalid date')) {
+                            userFriendlyMessage = 'Ngày tháng không hợp lệ.';
+                            suggestion = 'Vui lòng kiểm tra lại các trường ngày tháng.';
+                        } else if (errorMessage.includes('invalid number')) {
+                            userFriendlyMessage = 'Số tiền không hợp lệ.';
+                            suggestion = 'Vui lòng kiểm tra lại các trường số tiền.';
+                        } else {
+                            // Nếu không nhận diện được lỗi cụ thể
+                            userFriendlyMessage = 'Không thể lưu dữ liệu do lỗi từ hệ thống.';
+                            suggestion = 'Vui lòng kiểm tra lại thông tin hoặc liên hệ quản trị viên.';
+                        }
+                    } else if (error.message) {
+                        // Lỗi từ validation phía client
+                        userFriendlyMessage = error.message;
+                    }
+
+                    // Hiển thị lỗi thân thiện với người dùng
                     Swal.fire({
                         icon: 'error',
-                        title: 'Lỗi khi lưu dữ liệu',
-                        html: `<div class="text-left">
-                <p class="font-semibold mb-2">Chi tiết lỗi:</p>
-                <p class="text-red-600">${error.message || 'Có lỗi xảy ra khi lưu dữ liệu'}</p>
-                ${error.stack ? `<details class="mt-3">
-                    <summary class="cursor-pointer text-blue-600">Xem chi tiết kỹ thuật</summary>
-                    <pre class="mt-2 text-xs bg-gray-100 p-2 rounded">${error.stack}</pre>
-                </details>` : ''}
-            </div>`,
+                        title: 'Không thể lưu dữ liệu',
+                        html: `
+        <div class="text-left">
+            <p class="mb-3">${userFriendlyMessage}</p>
+            ${suggestion ? `
+                <div class="mt-3 p-3 bg-blue-50 rounded-lg">
+                    <p class="text-sm text-blue-700">
+                        <i class="fas fa-lightbulb mr-2"></i>
+                        ${suggestion}
+                    </p>
+                </div>
+            ` : ''}
+        </div>
+    `,
                         confirmButtonColor: '#0ea5e9',
-                        confirmButtonText: 'Đóng'
+                        confirmButtonText: 'Đã hiểu',
+                        footer: '<a href="#" onclick="event.preventDefault(); toggleTechnicalDetails();" class="text-blue-600 text-sm">Xem chi tiết kỹ thuật</a>'
                     });
+
+                    // Lưu thông tin lỗi kỹ thuật để có thể xem khi cần
+                    window.lastTechnicalError = error;
                 }
             }
 
