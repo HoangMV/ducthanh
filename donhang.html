@@ -2030,7 +2030,7 @@
                         'SĐT': document.getElementById('soDienThoai').value,
                         'Email': document.getElementById('email').value,
                         'Ghi chú': document.getElementById('ghiChuKhachHang').value,
-                        'Người tạo': this.employeeName, // Use the employee name from URL
+                        'Người tạo': this.employeeName,
                         'Ngày tạo': this.formatDate(new Date())
                     };
 
@@ -2052,24 +2052,29 @@
                     });
 
                     if (response.status === 200) {
-                        // Generate a unique ID for the new customer if not provided by the API
-                        // This is needed as a temporary ID until we reload the full list
-                        const newCustomerId = khachHangData['Mã khách hàng'] ||
-                            'NEW_' + Date.now();
+                        // Lưu lại các giá trị dùng để tìm kiếm khách hàng vừa thêm
+                        const tenKhachHang = khachHangData['Tên khách hàng đầy đủ'];
+                        const soDienThoai = khachHangData['SĐT'];
 
-                        // Add the new customer to our internal list
-                        const newCustomer = {
-                            'ID khách hàng': newCustomerId,
-                            'Tên khách hàng đầy đủ': khachHangData['Tên khách hàng đầy đủ']
-                        };
-                        this.khachHangList.push(newCustomer);
+                        // Tải lại toàn bộ danh sách khách hàng để có thông tin mới nhất
+                        await this.loadKhachHangList();
 
-                        // Recreate the Choices.js instance with the updated list
+                        // Tìm khách hàng vừa thêm trong danh sách đã tải lại
+                        const newlyAddedCustomer = this.khachHangList.find(
+                            customer => customer['Tên khách hàng đầy đủ'] === tenKhachHang &&
+                                customer['SĐT'] === soDienThoai
+                        );
+
+                        if (!newlyAddedCustomer) {
+                            console.warn('Không tìm thấy khách hàng mới trong danh sách đã tải lại');
+                        }
+
+                        // Khởi tạo lại dropdown khách hàng
                         if (this.khachHangChoices) {
                             this.khachHangChoices.destroy();
                         }
 
-                        // Rebuild the select element
+                        // Tạo lại dropdown từ danh sách đã cập nhật
                         const khachHangSelect = document.getElementById('khachHang');
                         khachHangSelect.innerHTML = '<option value="">-- Chọn khách hàng --</option>';
 
@@ -2080,7 +2085,7 @@
                             khachHangSelect.appendChild(option);
                         });
 
-                        // Reinitialize Choices.js
+                        // Khởi tạo lại Choices.js
                         this.khachHangChoices = new Choices('#khachHang', {
                             searchEnabled: true,
                             searchPlaceholderValue: 'Nhập tên để tìm...',
@@ -2091,14 +2096,18 @@
                             position: 'bottom'
                         });
 
-                        // Set the newly created customer as selected
-                        this.khachHangChoices.setChoiceByValue(newCustomerId);
+                        // Chọn khách hàng mới thêm nếu tìm thấy
+                        if (newlyAddedCustomer) {
+                            const customerId = newlyAddedCustomer['ID khách hàng'] || newlyAddedCustomer.ID;
+                            this.khachHangChoices.setChoiceByValue(customerId);
+                        }
 
-                        // Đóng modal và hiện thông báo
+                        // Đóng modal và hiện thông báo thành công
                         this.closeKhachHangModal();
                         this.showAlert('success', 'Thành công!', 'Đã thêm khách hàng mới thành công!');
+                    } else {
+                        throw new Error(`HTTP Status: ${response.status}`);
                     }
-
                 } catch (error) {
                     console.error('Lỗi khi thêm khách hàng:', error);
                     this.showAlert('error', 'Lỗi!', 'Không thể thêm khách hàng. Vui lòng thử lại!');
