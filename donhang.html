@@ -169,6 +169,46 @@
                 opacity: 0;
             }
         }
+
+        /* Thông báo gợi ý loại hàng hoá */
+        #loaiHangHoaSuggestion {
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .suggestion-highlight {
+            background-color: #fef3c7 !important;
+            border-color: #f59e0b !important;
+        }
+
+        /* Thêm vào phần <style> ở đầu file */
+        .incomplete-row {
+            background-color: #fef2f2 !important;
+            border-color: #fca5a5 !important;
+        }
+
+        .complete-row {
+            background-color: #f0fdf4 !important;
+        }
+
+        .row-warning {
+            border-left: 4px solid #ef4444;
+        }
+
+        .row-success {
+            border-left: 4px solid #10b981;
+        }
     </style>
 </head>
 
@@ -765,6 +805,140 @@
                 return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
             }
 
+            // Thêm ánh xạ tên hàng hoá với loại hàng hoá
+            getLoaiHangHoaMapping() {
+                return {
+                    // Decal và in ấn
+                    'decal': 'Decal',
+                    'tem decal': 'Decal',
+                    'sticker': 'Decal',
+                    'nhãn dán': 'Decal',
+
+                    // Túi giấy
+                    'túi giấy': 'Túi giấy',
+                    'túi kraft': 'Túi giấy',
+                    'túi shopping': 'Túi giấy',
+
+                    // Tờ gấp và brochure
+                    'tờ gấp': 'Tờ gấp',
+                    'brochure': 'Tờ gấp',
+                    'leaflet': 'Tờ gấp',
+
+                    // Hộp giấy
+                    'hộp giấy': 'Hộp giấy',
+                    'hộp carton': 'Hộp giấy',
+                    'hộp đựng': 'Hộp giấy',
+
+                    // Hộp cứng
+                    'hộp cứng': 'Hộp cứng',
+                    'hộp nam châm': 'Hộp cứng',
+                    'hộp quà': 'Hộp cứng',
+
+                    // Tờ rơi
+                    'tờ rơi': 'Tờ rơi',
+                    'flyer': 'Tờ rơi',
+                    'quảng cáo': 'Tờ rơi',
+
+                    // Catalogue
+                    'catalogue': 'Catalogue',
+                    'catalog': 'Catalogue',
+                    'sách giới thiệu': 'Catalogue',
+
+                    // Voucher
+                    'voucher': 'Voucher',
+                    'phiếu giảm giá': 'Voucher',
+                    'coupon': 'Voucher',
+
+                    // Thiệp
+                    'thiệp': 'Thiệp',
+                    'thiệp mời': 'Thiệp',
+                    'name card': 'Thiệp',
+                    'card visit': 'Thiệp',
+
+                    // Phong bì
+                    'phong bì': 'Phong bì',
+                    'envelope': 'Phong bì',
+
+                    // Poster
+                    'poster': 'Poster',
+                    'áp phích': 'Poster',
+
+                    // Hoá đơn
+                    'hoá đơn': 'Hoá đơn',
+                    'hóa đơn': 'Hoá đơn',
+                    'bill': 'Hoá đơn',
+
+                    // Thùng Carton
+                    'thùng carton': 'Thùng Carton',
+                    'thùng giấy': 'Thùng Carton',
+                    'thùng đựng': 'Thùng Carton',
+
+                    // Formex
+                    'formex': 'Formex',
+                    'tấm formex': 'Formex',
+
+                    // Bạt
+                    'bạt': 'Bạt',
+                    'banner': 'Bạt',
+                    'băng rôn': 'Bạt',
+
+                    // Decal PP
+                    'decal pp': 'Decal PP',
+                    'pp decal': 'Decal PP',
+
+                    // PVC
+                    'pvc': 'PVC',
+                    'tấm pvc': 'PVC',
+
+                    // PTK
+                    'ptk': 'PTK',
+
+                    // Standee
+                    'standee': 'Standee',
+                    'x-banner': 'Standee',
+
+                    // Mica
+                    'mica': 'Mica',
+                    'tấm mica': 'Mica',
+                    'acrylic': 'Mica',
+
+                    // Thẻ nhựa
+                    'thẻ nhựa': 'Thẻ nhựa',
+                    'card nhựa': 'Thẻ nhựa',
+                    'thẻ từ': 'Thẻ nhựa',
+
+                    // Tag treo
+                    'tag treo': 'Tag treo',
+                    'nhãn treo': 'Tag treo',
+
+                    // Hashtag
+                    'hashtag': 'Hashtag',
+                    'tag': 'Hashtag'
+                };
+            }
+
+            // Hàm tự động gợi ý loại hàng hoá dựa trên tên
+            suggestLoaiHangHoa(tenHangHoa) {
+                if (!tenHangHoa) return '';
+
+                const mapping = this.getLoaiHangHoaMapping();
+                const tenLower = tenHangHoa.toLowerCase().trim();
+
+                // Tìm kiếm chính xác trước
+                if (mapping[tenLower]) {
+                    return mapping[tenLower];
+                }
+
+                // Tìm kiếm theo từ khóa có trong tên
+                for (const [keyword, loai] of Object.entries(mapping)) {
+                    if (tenLower.includes(keyword) || keyword.includes(tenLower)) {
+                        return loai;
+                    }
+                }
+
+                return ''; // Không tìm thấy
+            }
+
             // Add this property to the constructor
             // In the OrderManager class, add a new property to store employee list
             constructor(appId, accessKey) {
@@ -976,6 +1150,38 @@
                     }
                 });
 
+                // Trong hàm setupEventListeners(), thêm đoạn này:
+
+                // Sự kiện tự động gợi ý loại hàng hoá khi nhập tên hàng hoá
+                document.getElementById('modalTenHangHoa').addEventListener('input', (e) => {
+                    const tenHangHoa = e.target.value;
+                    const suggestedLoai = this.suggestLoaiHangHoa(tenHangHoa);
+
+                    if (suggestedLoai) {
+                        const modalLoaiHangHoa = document.getElementById('modalLoaiHangHoa');
+                        const modalLoaiHangHoaCustom = document.getElementById('modalLoaiHangHoaCustom');
+
+                        // Tìm xem có tùy chọn trùng khớp không
+                        const matchingOption = Array.from(modalLoaiHangHoa.options)
+                            .find(opt => opt.value && opt.value !== 'custom' && opt.textContent === suggestedLoai);
+
+                        if (matchingOption) {
+                            // Chọn tùy chọn có sẵn
+                            modalLoaiHangHoa.value = matchingOption.value;
+                            modalLoaiHangHoaCustom.classList.add('hidden');
+                            modalLoaiHangHoaCustom.value = '';
+                        } else {
+                            // Sử dụng tùy chọn tùy chỉnh
+                            modalLoaiHangHoa.value = 'custom';
+                            modalLoaiHangHoaCustom.value = suggestedLoai;
+                            modalLoaiHangHoaCustom.classList.remove('hidden');
+                        }
+
+                        // Hiển thị thông báo gợi ý
+                        this.showSuggestionNotification(suggestedLoai);
+                    }
+                });
+
                 // Sự kiện giá sản xuất
                 document.getElementById('giaSanXuatTamTinh').addEventListener('input', () => this.updateOrderTotals());
 
@@ -1020,6 +1226,85 @@
                 window.closeExportModal = () => this.closeExportModal();
                 window.exportPrintTemplate = () => this.exportPrintTemplate();
                 window.exportExcelFile = () => this.exportExcelFile();
+            }
+
+            // Hiển thị thông báo gợi ý
+            showSuggestionNotification(suggestedLoai) {
+                // Tạo element thông báo nếu chưa có
+                let notification = document.getElementById('loaiHangHoaSuggestion');
+                if (!notification) {
+                    notification = document.createElement('div');
+                    notification.id = 'loaiHangHoaSuggestion';
+                    notification.className = 'mt-1 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700';
+
+                    // Chèn sau trường Loại hàng hoá
+                    const modalLoaiHangHoaContainer = document.getElementById('modalLoaiHangHoa').closest('.form-group');
+                    modalLoaiHangHoaContainer.appendChild(notification);
+                }
+
+                notification.innerHTML = `
+        <i class="fas fa-lightbulb mr-1"></i>
+        Gợi ý: <strong>${suggestedLoai}</strong>
+        <button type="button" class="ml-2 text-blue-600 hover:text-blue-800 underline" onclick="this.parentElement.style.display='none'">
+            Ẩn
+        </button>
+    `;
+                notification.style.display = 'block';
+
+                // Tự động ẩn sau 5 giây
+                setTimeout(() => {
+                    if (notification) {
+                        notification.style.display = 'none';
+                    }
+                }, 5000);
+            }
+
+            // Lưu ánh xạ tên-loại do người dùng tạo
+            saveUserMapping(tenHangHoa, loaiHangHoa) {
+                if (!tenHangHoa || !loaiHangHoa) return;
+
+                try {
+                    const userMappings = JSON.parse(localStorage.getItem('userHangHoaMappings')) || {};
+                    const key = tenHangHoa.toLowerCase().trim();
+                    userMappings[key] = loaiHangHoa;
+                    localStorage.setItem('userHangHoaMappings', JSON.stringify(userMappings));
+                } catch (error) {
+                    console.error('Lỗi khi lưu ánh xạ người dùng:', error);
+                }
+            }
+
+            // Cập nhật hàm suggestLoaiHangHoa để sử dụng dữ liệu người dùng
+            suggestLoaiHangHoa(tenHangHoa) {
+                if (!tenHangHoa) return '';
+
+                const tenLower = tenHangHoa.toLowerCase().trim();
+
+                // Kiểm tra ánh xạ do người dùng tạo trước
+                try {
+                    const userMappings = JSON.parse(localStorage.getItem('userHangHoaMappings')) || {};
+                    if (userMappings[tenLower]) {
+                        return userMappings[tenLower];
+                    }
+                } catch (error) {
+                    console.error('Lỗi khi đọc ánh xạ người dùng:', error);
+                }
+
+                // Sau đó mới kiểm tra ánh xạ mặc định
+                const mapping = this.getLoaiHangHoaMapping();
+
+                // Tìm kiếm chính xác trước
+                if (mapping[tenLower]) {
+                    return mapping[tenLower];
+                }
+
+                // Tìm kiếm theo từ khóa có trong tên
+                for (const [keyword, loai] of Object.entries(mapping)) {
+                    if (tenLower.includes(keyword) || keyword.includes(tenLower)) {
+                        return loai;
+                    }
+                }
+
+                return ''; // Không tìm thấy
             }
 
             // Tạo mã đơn hàng mới
@@ -1437,6 +1722,11 @@
                 inputs[2].addEventListener('input', () => this.calculateRowValues(newRow));
                 inputs[3].addEventListener('input', () => this.calculateRowValues(newRow));
 
+                // Thêm:
+                inputs[0].addEventListener('input', () => {
+                    setTimeout(() => this.highlightIncompleteRows(), 100);
+                });
+
                 // Xử lý sự kiện cho input đơn vị tính tùy chỉnh
                 const customUnitInput = newRow.querySelector('.custom-unit');
                 if (customUnitInput && unitSelect) {
@@ -1597,6 +1887,7 @@
                 const maDonHang = document.getElementById('maDonHang').value;
                 const hangHoaRows = document.querySelectorAll('#chiTietTableBody tr');
                 const hangHoaItems = [];
+                const errorItems = []; // Mảng lưu các lỗi
 
                 hangHoaRows.forEach((row, index) => {
                     const inputs = row.querySelectorAll('input');
@@ -1617,14 +1908,23 @@
                         donViTinh = row.querySelector('td:nth-child(3) input')?.value || '';
                     }
 
-                    // Lấy loại hàng hóa từ data attribute (đã được đặt trong handleUpdateHangHoa)
+                    // Lấy loại hàng hóa từ data attribute
                     const loaiHangHoa = row.dataset.loaiHangHoa || '';
+                    const tenHangHoa = inputs[0].value;
+
+                    // Kiểm tra các trường bắt buộc
+                    if (!tenHangHoa) {
+                        errorItems.push(`Dòng ${index + 1}: Chưa nhập tên hàng hóa`);
+                    }
+                    if (!loaiHangHoa) {
+                        errorItems.push(`Dòng ${index + 1}: Chưa chọn loại hàng hóa cho "${tenHangHoa || 'hàng hóa không tên'}"`);
+                    }
 
                     // Tạo đối tượng chứa thông tin hàng hóa
                     const hangHoaItem = {
                         'ID hàng hoá': this.generateHangHoaID(maDonHang, index + 1),
                         'ID đơn hàng': maDonHang,
-                        'Tên hàng hoá': inputs[0].value,
+                        'Tên hàng hoá': tenHangHoa,
                         'Loại hàng hoá': loaiHangHoa,
                         'Mô tả': row.dataset.moTa || '',
                         'Đơn vị tính': donViTinh,
@@ -1647,11 +1947,15 @@
                     hangHoaItems.push(hangHoaItem);
                 });
 
+                // Nếu có lỗi, ném ra exception với danh sách lỗi
+                if (errorItems.length > 0) {
+                    throw new Error(errorItems.join('\n'));
+                }
+
                 return hangHoaItems;
             }
 
             // Lưu dữ liệu vào AppSheet 
-            // 4. Sử dụng Promise.all cho tất cả request API để tăng tốc độ
             async saveDataToAppSheet() {
                 try {
                     // Kiểm tra các trường bắt buộc
@@ -1673,6 +1977,22 @@
                     const hangHoaRows = document.querySelectorAll('#chiTietTableBody tr');
                     if (hangHoaRows.length === 0) {
                         throw new Error('Vui lòng thêm ít nhất một hàng hóa vào đơn hàng');
+                    }
+
+                    // Thu thập và kiểm tra dữ liệu hàng hóa
+                    let hangHoaData;
+                    try {
+                        hangHoaData = this.collectHangHoaData();
+                    } catch (validationError) {
+                        // Hiển thị lỗi validation với danh sách chi tiết
+                        await Swal.fire({
+                            icon: 'error',
+                            title: 'Dữ liệu chưa đầy đủ',
+                            html: `<div style="text-align: left; white-space: pre-line;">${validationError.message}</div>`,
+                            confirmButtonColor: '#d33',
+                            confirmButtonText: 'Đã hiểu'
+                        });
+                        return; // Dừng quá trình lưu
                     }
 
                     // Tạo promise toast thay vì loading overlay
@@ -1702,14 +2022,8 @@
                                 "Rows": [donHangData]
                             };
 
-                            // Thu thập dữ liệu hàng hóa
-                            this.hangHoaList = this.collectHangHoaData();
-
-                            // Kiểm tra dữ liệu hàng hóa
-                            const hasEmptyItems = this.hangHoaList.some(item => !item['Tên hàng hoá']);
-                            if (hasEmptyItems) {
-                                throw new Error('Vui lòng nhập tên cho tất cả các hàng hóa');
-                            }
+                            // Sử dụng dữ liệu đã được validate
+                            this.hangHoaList = hangHoaData;
 
                             // Tạo payload dữ liệu hàng hóa
                             const hangHoaPayload = {
@@ -1781,6 +2095,30 @@
                     console.error('Lỗi khi lưu dữ liệu:', error);
                     FuiToast.error(error.message || 'Có lỗi xảy ra khi lưu thông tin! Vui lòng thử lại.');
                 }
+            }
+
+            // Thêm hàm này vào class OrderManager
+            highlightIncompleteRows() {
+                const hangHoaRows = document.querySelectorAll('#chiTietTableBody tr');
+
+                hangHoaRows.forEach((row, index) => {
+                    const tenHangHoa = row.querySelector('input[type="text"]').value;
+                    const loaiHangHoa = row.dataset.loaiHangHoa || '';
+
+                    // Xóa highlight cũ
+                    row.classList.remove('bg-red-50', 'border-red-200');
+
+                    // Highlight nếu thiếu thông tin
+                    if (tenHangHoa && !loaiHangHoa) {
+                        row.classList.add('bg-red-50', 'border-red-200');
+                        row.style.borderWidth = '1px';
+                        row.style.borderStyle = 'solid';
+                    } else if (tenHangHoa && loaiHangHoa) {
+                        row.classList.add('bg-green-50');
+                        row.style.borderWidth = '';
+                        row.style.borderStyle = '';
+                    }
+                });
             }
 
 
@@ -1911,6 +2249,21 @@
 
                 if (!this.currentEditingRow) return;
 
+                // Trong hàm handleUpdateHangHoa, thêm đoạn này trước try block:
+
+                const tenHangHoa = document.getElementById('modalTenHangHoa').value;
+                const modalLoaiHangHoa = document.getElementById('modalLoaiHangHoa');
+                const modalLoaiHangHoaCustom = document.getElementById('modalLoaiHangHoaCustom');
+
+                const loaiHangHoa = modalLoaiHangHoa.value === 'custom' ?
+                    modalLoaiHangHoaCustom.value :
+                    modalLoaiHangHoa.options[modalLoaiHangHoa.selectedIndex].text;
+
+                // Lưu ánh xạ do người dùng tạo
+                if (tenHangHoa && loaiHangHoa) {
+                    this.saveUserMapping(tenHangHoa, loaiHangHoa);
+                }
+
                 try {
                     // Cập nhật các giá trị trong hàng
                     const rowInputs = this.currentEditingRow.querySelectorAll('input');
@@ -1978,6 +2331,9 @@
                     // Tính toán lại giá trị và cập nhật các giá trị hiển thị đã được định dạng
                     this.calculateRowValues(this.currentEditingRow);
                     this.updateOrderTotals();
+
+                    // Highlight các hàng sau khi cập nhật
+                    this.highlightIncompleteRows();
 
                     // Đóng modal
                     this.closeHangHoaDetailModal();
@@ -3128,6 +3484,25 @@
                 }
             }
 
+            // Thêm nút này vào modal hoặc phần settings
+            resetUserMappings() {
+                Swal.fire({
+                    title: 'Xác nhận reset',
+                    text: 'Bạn có muốn xóa tất cả các ánh xạ Tên-Loại hàng hoá đã học không?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: 'Xóa',
+                    cancelButtonText: 'Hủy'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        localStorage.removeItem('userHangHoaMappings');
+                        this.showAlert('success', 'Đã reset!', 'Các ánh xạ đã được xóa thành công.');
+                    }
+                });
+            }
+
             // Tải các tùy chọn đã lưu từ localStorage
             loadSavedOptions() {
                 try {
@@ -3212,8 +3587,5 @@
             const orderManager = new OrderManager(appId, accessKey);
         });
     </script>
-
-
 </body>
-
 </html>
